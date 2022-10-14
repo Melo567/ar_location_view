@@ -16,6 +16,8 @@ class MyApp extends StatefulWidget {
 }
 
 class _MyAppState extends State<MyApp> {
+  List<Annotation> annotations = [];
+
   @override
   void initState() {
     super.initState();
@@ -26,12 +28,18 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         body: ArLocationWidget(
-          annotations: dataFromJson(data).data,
+          annotations: annotations,
+          showDebugInfoSensor: false,
           annotationViewBuilder: (context, annotation) {
-            return ImmoAnnotationView(
-                onClick: () {}, annotation: annotation as ImmoAnnotation);
+            return AnnotationView(
+                onClick: () {}, annotation: annotation as Annotation);
           },
-          onLocationChange: (Position position) {},
+          onLocationChange: (Position position) {
+            annotations = fakeAnnotation(position: position, numberMaxPoi: 75);
+            Future.delayed(const Duration(seconds: 10), () {
+              setState(() {});
+            });
+          },
         ),
       ),
     );

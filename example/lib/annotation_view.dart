@@ -2,15 +2,15 @@ import 'package:flutter/material.dart';
 
 import 'annotations.dart';
 
-class ImmoAnnotationView extends StatelessWidget {
-  const ImmoAnnotationView({
+class AnnotationView extends StatelessWidget {
+  const AnnotationView({
     Key? key,
     required this.onClick,
     required this.annotation,
   }) : super(key: key);
 
   final VoidCallback onClick;
-  final ImmoAnnotation annotation;
+  final Annotation annotation;
 
   @override
   Widget build(BuildContext context) {
@@ -31,6 +31,7 @@ class ImmoAnnotationView extends StatelessWidget {
                     bottomLeft: Radius.circular(5),
                   ),
                 ),
+                child: typeFactory(annotation.type),
               ),
             ),
             Expanded(
@@ -41,35 +42,10 @@ class ImmoAnnotationView extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          '100 00 €',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        Container(
-                          decoration: BoxDecoration(
-                            color: Colors.black54,
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(2.0),
-                            child: Text(
-                              annotation.action,
-                              style: const TextStyle(
-                                color: Colors.white,
-                              ),
-                            ),
-                          ),
-                        )
-                      ],
-                    ),
-                    const Text(
-                      'Libel',
-                      style: TextStyle(
-                        fontSize: 12,
-                      ),
+                    Text(
+                      annotation.type.toString().substring(15),
+                      maxLines: 1,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
                     ),
                     Text(
                       '${annotation.distanceFromUser.toInt()} m',
@@ -81,6 +57,30 @@ class ImmoAnnotationView extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget typeFactory(AnnotationType type) {
+    IconData iconData = Icons.ac_unit_outlined;
+    Color color = Colors.teal;
+    switch (type) {
+      case AnnotationType.pharmacy:
+        iconData = Icons.local_pharmacy_outlined;
+        color = Colors.red;
+        break;
+      case AnnotationType.hotel:
+        iconData = Icons.hotel_outlined;
+        color = Colors.green;
+        break;
+      case AnnotationType.library:
+        iconData = Icons.library_add_outlined;
+        color = Colors.blue;
+        break;
+    }
+    return Icon(
+      iconData,
+      size: 40,
+      color: color,
     );
   }
 }
