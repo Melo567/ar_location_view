@@ -26,12 +26,13 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       home: Scaffold(
         body: ArLocationWidget(
-            annotations: dataFromJson(data).data,
-            annotationViewBuilder: (context, annotation) {
-              return ImmoAnnotationView(
-                  onClick: () {}, annotation: annotation as ImmoAnnotation);
-            },
-            onLocationChange: (Position position) {}),
+          annotations: dataFromJson(data).data,
+          annotationViewBuilder: (context, annotation) {
+            return ImmoAnnotationView(
+                onClick: () {}, annotation: annotation as ImmoAnnotation);
+          },
+          onLocationChange: (Position position) {},
+        ),
       ),
     );
   }
