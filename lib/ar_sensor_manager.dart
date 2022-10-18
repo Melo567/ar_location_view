@@ -1,5 +1,5 @@
-
 import 'dart:async';
+import 'dart:math';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
@@ -19,7 +19,7 @@ class ArSensorManager {
   StreamSubscription<UserAccelerometerEvent>? _userAccelerationStream;
   StreamSubscription<Position>? _positionSubscription;
   final NativeDeviceOrientationCommunicator _deviceOrientationCommunicator =
-  NativeDeviceOrientationCommunicator();
+      NativeDeviceOrientationCommunicator();
   Stream<NativeDeviceOrientation>? _orientationStream;
   StreamSubscription<NativeDeviceOrientation>? _orientationStreamSubscription;
   NativeDeviceOrientation _orientation = NativeDeviceOrientation.portraitUp;
@@ -32,12 +32,9 @@ class ArSensorManager {
   double _heading = 0.0;
   double _compassAccuracy = 0.0;
 
-  double _previousPitch = 0.0;
-  double _previousHeading = 0.0;
-
-  final double _filterFactor = 0.00002;
-
   final StreamController<ArSensor> _arSensor = StreamController();
+
+  List<double> pitchHistory = [];
 
   void init() {
     _checkLocationPermission();
@@ -46,14 +43,14 @@ class ArSensorManager {
   void _initialisation() {
     _accelerationStream =
         accelerometerEvents.listen((AccelerometerEvent event) {
-          _accelerometer = Vector3(event.x, event.y, event.z);
-          _calculateSensor();
-        });
+      _accelerometer = Vector3(event.x, event.y, event.z);
+      _calculateSensor();
+    });
     _userAccelerationStream =
         userAccelerometerEvents.listen((UserAccelerometerEvent event) {
-          _userAccelerometer = Vector3(event.x, event.y, event.z);
-          _calculateSensor();
-        });
+      _userAccelerometer = Vector3(event.x, event.y, event.z);
+      _calculateSensor();
+    });
     _headingStream = ArCompass.events?.listen((CompassEvent event) {
       if (event.heading != null && event.accuracy != null) {
         _heading = event.heading!;
@@ -64,9 +61,9 @@ class ArSensorManager {
 
     _positionSubscription =
         Geolocator.getPositionStream().listen((Position position) {
-          _position = position;
-          _calculateSensor();
-        });
+      _position = position;
+      _calculateSensor();
+    });
 
     _orientationStream =
         _deviceOrientationCommunicator.onOrientationChanged(useSensor: true);
@@ -81,20 +78,22 @@ class ArSensorManager {
     final y = coef * (_accelerometer.y - _userAccelerometer.y);
     final z = coef * (_accelerometer.z - _userAccelerometer.z);
     final Vector3 gravity = Vector3(x, y, z);
-    final double newPitch = ArMath.calculatePitch(
+    final double pitch = ArMath.calculatePitch(
       gravity: gravity,
       orientation: _orientation,
     );
 
-    final pitch =
-    ArMath.exponentialFilter(newPitch, _previousPitch, _filterFactor, true);
-    final heading = ArMath.exponentialFilter(
-        _heading, _previousHeading, _filterFactor, true);
-    _previousPitch = newPitch;
-    _previousHeading = _heading;
+    pitchHistory.add(pitch);
+
+    const serieLength = 100;
+    const alpha = 0.009;
+    if (pitchHistory.length > serieLength) {
+      pitchHistory = pitchHistory.sublist(pitchHistory.length - serieLength);
+    }
+
     final arSensor = ArSensor(
-      heading: heading,
-      pitch: pitch,
+      heading: _heading,
+      pitch: _filterExponantial(pitchHistory, alpha),
       location: _position,
       orientation: _orientation,
       compassAccuracy: _compassAccuracy,
@@ -123,5 +122,15 @@ class ArSensorManager {
     _positionSubscription?.cancel();
     _orientationStreamSubscription?.cancel();
     _headingStream?.cancel();
+  }
+
+  double _filterExponantial(List<double> numbers, double alpha) {
+    final coef = 1 - alpha;
+    final temps = numbers.reversed.toList();
+    double sum = 0.0;
+    for (int i = 0; i < temps.length; i++) {
+      sum += pow(coef, i) * temps[i];
+    }
+    return alpha * sum;
   }
 }

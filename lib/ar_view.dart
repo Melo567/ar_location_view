@@ -1,4 +1,3 @@
-
 import 'dart:math';
 
 import 'package:flutter/foundation.dart';
@@ -95,21 +94,21 @@ class _ArViewState extends State<ArView> {
                   ),
                 Stack(
                     children: annotations.map(
-                          (e) {
-                        return Positioned(
-                          top: e.arPosition.dx + height * 0.5,
-                          left: e.arPosition.dy,
-                          child: Transform.translate(
-                            offset: Offset(0, e.arPositionOffset.dy),
-                            child: SizedBox(
-                              width: widget.annotationWidth,
-                              height: widget.annotationHeight,
-                              child: widget.annotationViewBuilder(context, e),
-                            ),
-                          ),
-                        );
-                      },
-                    ).toList()),
+                  (e) {
+                    return Positioned(
+                      top: e.arPosition.dx + height * 0.5,
+                      left: e.arPosition.dy,
+                      child: Transform.translate(
+                        offset: Offset(0, e.arPositionOffset.dy),
+                        child: SizedBox(
+                          width: widget.annotationWidth,
+                          height: widget.annotationHeight,
+                          child: widget.annotationViewBuilder(context, e),
+                        ),
+                      ),
+                    );
+                  },
+                ).toList()),
               ],
             );
           }
@@ -204,7 +203,11 @@ class _ArViewState extends State<ArView> {
   List<ArAnnotation> _filterAndSortArAnnotation(List<ArAnnotation> annotations,
       ArSensor arSensor, Position deviceLocation) {
     List<ArAnnotation> temps = _calculateDistanceAndBearingFromUser(
-        widget.annotations, deviceLocation, arSensor);
+        annotations, deviceLocation, arSensor);
+    temps = annotations
+        .where(
+            (element) => element.distanceFromUser < widget.maxVisibleDistance)
+        .toList();
     temps = _visibleAnnotations(temps, arSensor.heading);
     return temps;
   }
@@ -212,8 +215,8 @@ class _ArViewState extends State<ArView> {
   void _transformAnnotation(
       List<ArAnnotation> annotations, double width, double height) {
     annotations.sort((a, b) => (a.distanceFromUser < b.distanceFromUser)
-        ? 1
-        : ((a.distanceFromUser > b.distanceFromUser) ? -1 : 0));
+        ? -1
+        : ((a.distanceFromUser > b.distanceFromUser) ? 1 : 0));
 
     for (ArAnnotation annotation in annotations) {
       var i = 0;
@@ -223,13 +226,13 @@ class _ArViewState extends State<ArView> {
           break;
         }
         final collision =
-        intersects(annotation, annotation2, widget.annotationWidth);
+            intersects(annotation, annotation2, widget.annotationWidth);
         if (collision) {
           annotation.arPositionOffset = Offset(
               0,
-              annotation2.arPositionOffset.dy +
-                  (widget.yOffsetOverlap ?? widget.annotationHeight) +
-                  widget.paddingOverlap);
+              annotation2.arPositionOffset.dy -
+                  ((widget.yOffsetOverlap ?? widget.annotationHeight) +
+                      widget.paddingOverlap));
         }
         i++;
       }
@@ -239,7 +242,7 @@ class _ArViewState extends State<ArView> {
   bool intersects(
       ArAnnotation annotation1, ArAnnotation annotation2, double width) {
     return (annotation2.arPosition.dx >= annotation1.arPosition.dx &&
-        annotation2.arPosition.dx <= (annotation1.arPosition.dx + width)) ||
+            annotation2.arPosition.dx <= (annotation1.arPosition.dx + width)) ||
         (annotation1.arPosition.dx >= annotation2.arPosition.dx &&
             annotation1.arPosition.dx <= (annotation2.arPosition.dx + width));
   }

@@ -1,8 +1,18 @@
+## 0.0.4
+
+* Filter pitch.
+
+
+## 0.0.3
+
+* Update example with fake annotation.
+* Resolve offset for overlap annotation sort annotation for distance user
+
+
 ## 0.0.2
 
-* TODO: Update example.
-* 
-* 
+*  Update example.
+
 ## 0.0.1
 
-* TODO: Describe initial release.
+*  Describe initial release.
