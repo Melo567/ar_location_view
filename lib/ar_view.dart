@@ -1,5 +1,4 @@
 import 'dart:math';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -54,6 +53,8 @@ class _ArViewState extends State<ArView> {
 
   Position? position;
 
+  double widthAnnotation = 0.0;
+
   @override
   void initState() {
     ArSensorManager.instance.init();
@@ -96,8 +97,8 @@ class _ArViewState extends State<ArView> {
                     children: annotations.map(
                   (e) {
                     return Positioned(
-                      top: e.arPosition.dx + height * 0.5,
-                      left: e.arPosition.dy,
+                      left: e.arPosition.dx + height * 0.5,
+                      top: e.arPosition.dy,
                       child: Transform.translate(
                         offset: Offset(0, e.arPositionOffset.dy),
                         child: SizedBox(
@@ -192,8 +193,8 @@ class _ArViewState extends State<ArView> {
           deviceLocation.longitude,
           annotationLocation.latitude,
           annotationLocation.longitude);
-      final dx = arSensor.pitch * arStatus.vPixelPerDegree;
-      final dy = ArMath.deltaAngle(e.azimuth, arSensor.heading) *
+      final dy = arSensor.pitch * arStatus.vPixelPerDegree;
+      final dx = ArMath.deltaAngle(e.azimuth, arSensor.heading) *
           arStatus.hPixelPerDegree;
       e.arPosition = Offset(dx, dy);
       return e;
@@ -225,8 +226,7 @@ class _ArViewState extends State<ArView> {
         if (annotation.uid == annotation2.uid) {
           break;
         }
-        final collision =
-            intersects(annotation, annotation2, widget.annotationWidth);
+        final collision = intersects(annotation, annotation2, widthAnnotation);
         if (collision) {
           annotation.arPositionOffset = Offset(
               0,

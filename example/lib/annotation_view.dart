@@ -49,7 +49,7 @@ class AnnotationView extends StatelessWidget {
                     ),
                     Text(
                       '${annotation.distanceFromUser.toInt()} m',
-                    )
+                    ),
                   ],
                 ),
               ),

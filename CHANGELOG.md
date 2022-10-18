@@ -1,3 +1,8 @@
+## 0.0.5
+
+* Resolve bug.
+
+
 ## 0.0.4
 
 * Filter pitch.

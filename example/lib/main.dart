@@ -32,7 +32,10 @@ class _MyAppState extends State<MyApp> {
           showDebugInfoSensor: false,
           annotationViewBuilder: (context, annotation) {
             return AnnotationView(
-                onClick: () {}, annotation: annotation as Annotation);
+              key: ValueKey(annotation.uid),
+              onClick: () {},
+              annotation: annotation as Annotation,
+            );
           },
           onLocationChange: (Position position) {
             annotations = fakeAnnotation(position: position, numberMaxPoi: 75);
