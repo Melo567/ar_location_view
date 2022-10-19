@@ -1,3 +1,7 @@
+## 0.0.7
+
+* Format code.
+
 ## 0.0.6
 
 * Add documentation.
