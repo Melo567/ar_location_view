@@ -1,6 +1,5 @@
 import 'package:flutter/services.dart';
 
-
 class CompassEvent {
   // The heading, in degrees, of the device around its Z
   // axis, or where the top of the device is pointing.
@@ -27,9 +26,7 @@ class CompassEvent {
   }
 }
 
-
 class ArCompass {
-
   static final ArCompass _instance = ArCompass._();
 
   factory ArCompass() {
@@ -38,7 +35,8 @@ class ArCompass {
 
   ArCompass._();
 
-  static const EventChannel _compassChannel = EventChannel('pie/ar_view_location');
+  static const EventChannel _compassChannel =
+      EventChannel('pie/ar_view_location');
   static Stream<CompassEvent>? _stream;
 
   /// Provides a [Stream] of compass events that can be listened to.
