@@ -54,8 +54,6 @@ class _ArViewState extends State<ArView> {
 
   Position? position;
 
-  double widthAnnotation = 0.0;
-
   @override
   void initState() {
     ArSensorManager.instance.init();
@@ -86,7 +84,7 @@ class _ArViewState extends State<ArView> {
             final deviceLocation = arSensor.location!;
             final annotations = _filterAndSortArAnnotation(
                 widget.annotations, arSensor, deviceLocation);
-            _transformAnnotation(annotations, width, height);
+            _transformAnnotation(annotations);
             return Stack(
               children: [
                 if (kDebugMode && widget.showDebugInfoSensor)
@@ -98,8 +96,8 @@ class _ArViewState extends State<ArView> {
                     children: annotations.map(
                   (e) {
                     return Positioned(
-                      left: e.arPosition.dx + height * 0.5,
-                      top: e.arPosition.dy,
+                      left: e.arPosition.dx,
+                      top: e.arPosition.dy + height * 0.5,
                       child: Transform.translate(
                         offset: Offset(0, e.arPositionOffset.dy),
                         child: SizedBox(
@@ -130,10 +128,10 @@ class _ArViewState extends State<ArView> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text("Latitude  : ${arSensor?.location?.latitude}"),
-            Text("Longitude : ${arSensor?.location?.longitude}"),
-            Text("Pitch     : ${arSensor?.pitch}"),
-            Text("Heading   : ${arSensor?.heading}"),
+            Text('Latitude  : ${arSensor?.location?.latitude}'),
+            Text('Longitude : ${arSensor?.location?.longitude}'),
+            Text('Pitch     : ${arSensor?.pitch}'),
+            Text('Heading   : ${arSensor?.heading}'),
           ],
         ),
       ),
@@ -214,20 +212,20 @@ class _ArViewState extends State<ArView> {
     return temps;
   }
 
-  void _transformAnnotation(
-      List<ArAnnotation> annotations, double width, double height) {
+  void _transformAnnotation(List<ArAnnotation> annotations) {
     annotations.sort((a, b) => (a.distanceFromUser < b.distanceFromUser)
         ? -1
         : ((a.distanceFromUser > b.distanceFromUser) ? 1 : 0));
 
-    for (ArAnnotation annotation in annotations) {
+    for (final ArAnnotation annotation in annotations) {
       var i = 0;
       while (i < annotations.length) {
         final annotation2 = annotations[i];
         if (annotation.uid == annotation2.uid) {
           break;
         }
-        final collision = intersects(annotation, annotation2, widthAnnotation);
+        final collision =
+            intersects(annotation, annotation2, widget.annotationWidth);
         if (collision) {
           annotation.arPositionOffset = Offset(
               0,
