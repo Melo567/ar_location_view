@@ -95,4 +95,3 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
     );
   }
 }
-
