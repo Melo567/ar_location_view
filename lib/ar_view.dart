@@ -6,6 +6,7 @@ import 'package:native_device_orientation/native_device_orientation.dart';
 
 import 'ar_location_view.dart';
 
+/// Signature for a function that creates a widget for a given annotation,
 typedef AnnotationViewBuilder = Widget Function(
     BuildContext context, ArAnnotation annotation);
 

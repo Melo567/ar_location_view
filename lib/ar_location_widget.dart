@@ -19,16 +19,17 @@ class ArLocationWidget extends StatefulWidget {
     this.minDistanceReload = 50,
   }) : super(key: key);
 
-  ///List of POI
+  ///List of POIs
   final List<ArAnnotation> annotations;
 
-  ///widget
+  ///Function given context and annotation
+  ///return widget for annotation view
   final AnnotationViewBuilder annotationViewBuilder;
 
-  ///ArAnnotation width
+  ///Annotation view width
   final double annotationWidth;
 
-  ///ArAnnotation height
+  ///Annotation view height
   final double annotationHeight;
 
   ///Max distance marker visible
@@ -42,7 +43,7 @@ class ArLocationWidget extends StatefulWidget {
   ///Show debug info sensor in debug mode
   final bool showDebugInfoSensor;
 
-  ///Padding whew marker overlap
+  ///Padding when marker overlap
   final double paddingOverlap;
 
   ///Offset overlap y
@@ -51,7 +52,7 @@ class ArLocationWidget extends StatefulWidget {
   ///accessory
   final Widget? accessory;
 
-  ///Minimun distance reload
+  ///Min distance reload
   final double minDistanceReload;
 
   @override
