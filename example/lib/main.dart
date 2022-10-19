@@ -19,11 +19,6 @@ class _MyAppState extends State<MyApp> {
   List<Annotation> annotations = [];
 
   @override
-  void initState() {
-    super.initState();
-  }
-
-  @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
@@ -33,13 +28,13 @@ class _MyAppState extends State<MyApp> {
           annotationViewBuilder: (context, annotation) {
             return AnnotationView(
               key: ValueKey(annotation.uid),
-              onClick: () {},
               annotation: annotation as Annotation,
             );
           },
           onLocationChange: (Position position) {
-            annotations = fakeAnnotation(position: position, numberMaxPoi: 75);
-            Future.delayed(const Duration(seconds: 10), () {
+            Future.delayed(const Duration(seconds: 5), () {
+              annotations =
+                  fakeAnnotation(position: position, numberMaxPoi: 75);
               setState(() {});
             });
           },
