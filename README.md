@@ -4,7 +4,7 @@ Augmented reality for geo location for flutter.
 Inspired [HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality)
 
 
-# Demo
+## Demo
 
 ![ArLocationView](./demo.gif)
 
@@ -26,6 +26,25 @@ Where primary goal is the visibility of all POIs.
 
 ### Basic usage
 Look at the example
+
+### For iOs
+ArLocationView use device camera and location, so don't forget to add in `Info.plist`
+```xml
+	<key>NSLocationWhenInUseUsageDescription</key>
+    <key>NSLocationUsageDescription</key>
+    <key>NSLocationAlwaysUsageDescription</key>
+    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+    <key>NSCameraUsageDescription</key>
+```
+### For Android
+Add permission for `manifest.xml`
+```xml
+    <uses-permission android:name="android.permission.CAMERA"/>
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+```
 
 Create class extend ArAnnotation
 
