@@ -1,12 +1,12 @@
 # ar_location_view
 
 Augmented reality for geo location for flutter.
-Inspired ![HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality)
+Inspired [HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality)
 
 
 # Demo
 
-![ArLocationView](design/demo.gif)
+![ArLocationView](./design/demo.gif)
 
 
 ## Description
@@ -14,7 +14,7 @@ Inspired ![HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality
 ArLocationView is designed to used in areas with large concentration of static POIs.
 Where primary goal is the visibility of all POIs.
 
-Remark: Altitudes of POIs are disregarded
+**Remark:** Altitudes of POIs are disregarded
 
 
 ### Features
