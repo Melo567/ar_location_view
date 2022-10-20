@@ -6,7 +6,7 @@ Inspired [HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality)
 
 # Demo
 
-![ArLocationView](./design/demo.gif)
+![ArLocationView](./demo.gif)
 
 
 ## Description
