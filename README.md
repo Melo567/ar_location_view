@@ -1,11 +1,17 @@
 # ar_location_view
 
 Augmented reality for geo location for flutter.
-Inspired [HDAugmentedReality] (https://github.com/DanijelHuis/HDAugmentedReality)
+Inspired ![HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality)
+
+
+# Demo
+
+![ArLocationView](design/demo.gif)
+
 
 ## Description
 
-ArLocationView is designed to used in areas with large concentration of static POIs
+ArLocationView is designed to used in areas with large concentration of static POIs.
 Where primary goal is the visibility of all POIs.
 
 Remark: Altitudes of POIs are disregarded
@@ -31,7 +37,7 @@ class Annotation extends ArAnnotation {
 }
 ```
 
-Create a widget for annotation view for example
+Create a widget for Annotation view for example
 ```dart
 
 class AnnotationView extends StatelessWidget {
