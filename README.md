@@ -1,6 +1,6 @@
 # ar_location_view
 
-Augmented reality for geo location for flutter.
+Augmented reality for geolocation.
 Inspired [HDAugmentedReality](https://github.com/DanijelHuis/HDAugmentedReality)
 
 
@@ -28,22 +28,22 @@ Where primary goal is the visibility of all POIs.
 Look at the example
 
 ### For iOs
-ArLocationView use device camera and location, so don't forget to add in `Info.plist`
+ArLocationView use device camera and location, add in `Info.plist`
 ```xml
-	<key>NSLocationWhenInUseUsageDescription</key>
-    <key>NSLocationUsageDescription</key>
-    <key>NSLocationAlwaysUsageDescription</key>
-    <key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
-    <key>NSCameraUsageDescription</key>
+<key>NSLocationWhenInUseUsageDescription</key>
+<key>NSLocationUsageDescription</key>
+<key>NSLocationAlwaysUsageDescription</key>
+<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
+<key>NSCameraUsageDescription</key>
 ```
 ### For Android
-Add permission for `manifest.xml`
+Add permission in `manifest.xml`
 ```xml
-    <uses-permission android:name="android.permission.CAMERA"/>
-    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
-    <uses-permission android:name="android.permission.INTERNET"/>
-    <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
-    <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
+<uses-permission android:name="android.permission.CAMERA"/>
+<uses-permission android:name="android.permission.RECORD_AUDIO"/>
+<uses-permission android:name="android.permission.INTERNET"/>
+<uses-permission android:name="android.permission.ACCESS_FINE_LOCATION"/>
+<uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION"/>
 ```
 
 Create class extend ArAnnotation
