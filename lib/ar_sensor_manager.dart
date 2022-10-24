@@ -93,7 +93,7 @@ class ArSensorManager {
 
     final arSensor = ArSensor(
       heading: _heading,
-      pitch: _filterExponantial(pitchHistory, alpha),
+      pitch: _filterExponential(pitchHistory, alpha),
       location: _position,
       orientation: _orientation,
       compassAccuracy: _compassAccuracy,
@@ -124,7 +124,7 @@ class ArSensorManager {
     _headingStream?.cancel();
   }
 
-  double _filterExponantial(List<double> numbers, double alpha) {
+  double _filterExponential(List<double> numbers, double alpha) {
     final coef = 1 - alpha;
     final temps = numbers.reversed.toList();
     double sum = 0.0;

@@ -26,6 +26,7 @@ class ArView extends StatefulWidget {
     this.paddingOverlap = 5,
     this.yOffsetOverlap,
     required this.minDistanceReload,
+    this.scaleWithDistance = true,
   }) : super(key: key);
 
   final List<ArAnnotation> annotations;
@@ -44,6 +45,9 @@ class ArView extends StatefulWidget {
   final double paddingOverlap;
   final double? yOffsetOverlap;
   final double minDistanceReload;
+
+  ///Scale annotation view with distance from user
+  final bool scaleWithDistance;
 
   @override
   State<ArView> createState() => _ArViewState();
@@ -93,22 +97,30 @@ class _ArViewState extends State<ArView> {
                     child: debugInfo(context, arSensor),
                   ),
                 Stack(
-                    children: annotations.map(
-                  (e) {
-                    return Positioned(
-                      left: e.arPosition.dx,
-                      top: e.arPosition.dy + height * 0.5,
-                      child: Transform.translate(
-                        offset: Offset(0, e.arPositionOffset.dy),
-                        child: SizedBox(
-                          width: widget.annotationWidth,
-                          height: widget.annotationHeight,
-                          child: widget.annotationViewBuilder(context, e),
+                  children: annotations.map(
+                    (e) {
+                      return Positioned(
+                        left: e.arPosition.dx,
+                        top: e.arPosition.dy + height * 0.5,
+                        child: Transform.translate(
+                          offset: Offset(0, e.arPositionOffset.dy),
+                          child: Transform.scale(
+                            scale: widget.scaleWithDistance
+                                ? 1 -
+                                    (e.distanceFromUser /
+                                        (widget.maxVisibleDistance + 280))
+                                : 1,
+                            child: SizedBox(
+                              width: widget.annotationWidth,
+                              height: widget.annotationHeight,
+                              child: widget.annotationViewBuilder(context, e),
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ).toList()),
+                      );
+                    },
+                  ).toList(),
+                ),
               ],
             );
           }

@@ -17,6 +17,7 @@ class ArLocationWidget extends StatefulWidget {
     this.yOffsetOverlap,
     this.accessory,
     this.minDistanceReload = 50,
+    this.scaleWithDistance = true,
   }) : super(key: key);
 
   ///List of POIs
@@ -55,6 +56,9 @@ class ArLocationWidget extends StatefulWidget {
   ///Min distance reload
   final double minDistanceReload;
 
+  ///Scale annotation view with distance from user
+  final bool scaleWithDistance;
+
   @override
   State<ArLocationWidget> createState() => _ArLocationWidgetState();
 }
@@ -89,8 +93,9 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
             paddingOverlap: widget.paddingOverlap,
             yOffsetOverlap: widget.yOffsetOverlap,
             minDistanceReload: widget.minDistanceReload,
+            scaleWithDistance: widget.scaleWithDistance,
           ),
-        if (widget.accessory != null) widget.accessory!
+        if (initCam && widget.accessory != null) widget.accessory!
       ],
     );
   }
