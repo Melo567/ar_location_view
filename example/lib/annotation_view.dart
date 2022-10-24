@@ -15,7 +15,7 @@ class AnnotationView extends StatelessWidget {
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(5),
-        color: Colors.white,
+        color: Colors.white.withAlpha(150),
       ),
       child: Row(
         children: [

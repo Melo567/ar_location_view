@@ -53,7 +53,7 @@ class ArView extends StatefulWidget {
   State<ArView> createState() => _ArViewState();
 }
 
-class _ArViewState extends State<ArView> {
+class _ArViewState extends State<ArView> with WidgetsBindingObserver {
   ArStatus arStatus = ArStatus();
 
   Position? position;
@@ -68,6 +68,22 @@ class _ArViewState extends State<ArView> {
   void dispose() {
     ArSensorManager.instance.dispose();
     super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    super.didChangeAppLifecycleState(state);
+    switch(state){
+
+      case AppLifecycleState.resumed:
+        ArSensorManager.instance.init();
+        break;
+      case AppLifecycleState.inactive:
+      case AppLifecycleState.paused:
+      case AppLifecycleState.detached:
+        ArSensorManager.instance.dispose();
+        break;
+    }
   }
 
   @override
@@ -91,6 +107,7 @@ class _ArViewState extends State<ArView> {
             _transformAnnotation(annotations);
             return Stack(
               children: [
+
                 if (kDebugMode && widget.showDebugInfoSensor)
                   Positioned(
                     bottom: 0,
@@ -120,6 +137,17 @@ class _ArViewState extends State<ArView> {
                       );
                     },
                   ).toList(),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: CustomPaint(
+                    size: Size(width / 2, width / 2),
+                    painter: RadarPainter(
+                      maxDistance: widget.maxVisibleDistance,
+                      arAnnotations: widget.annotations,
+                      heading: arSensor.heading,
+                    ),
+                  ),
                 ),
               ],
             );
