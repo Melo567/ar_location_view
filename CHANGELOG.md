@@ -1,3 +1,7 @@
+## 1.1.4
+
+* Add documentation.
+
 ## 1.0.0
 
 * Add documentation.
