@@ -34,7 +34,7 @@ class _MyAppState extends State<MyApp> {
           onLocationChange: (Position position) {
             Future.delayed(const Duration(seconds: 5), () {
               annotations =
-                  fakeAnnotation(position: position, numberMaxPoi: 50);
+                  fakeAnnotation(position: position, numberMaxPoi: 5);
               setState(() {});
             });
           },

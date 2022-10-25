@@ -13,7 +13,7 @@ class RadarPainter extends CustomPainter {
     this.background = Colors.grey,
   });
 
-  final angle = pi / 8;
+  final angle = pi / 6;
 
   final Color markerColor;
   final Color background;
@@ -24,8 +24,8 @@ class RadarPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final radius = size.width / 2;
-    final angleView = angle + heading.toRadians;
-    final angleView1 = -angle + heading.toRadians;
+    final angleView = -(angle + heading.toRadians);
+    final angleView1 = -(-angle + heading.toRadians);
     final center = Offset(radius, radius);
     final Paint paint = Paint()..color = background.withAlpha(100);
     final Path path = Path();
@@ -49,10 +49,11 @@ class RadarPainter extends CustomPainter {
     for (final annotation in annotations) {
       final Paint paint = Paint()..color = markerColor;
       final distanceInRadar =
-          (annotation.distanceFromUser / maxDistance) * radius;
-      final dx = (distanceInRadar) * (1 - sin(annotation.azimuth.toRadians + pi));
-      final dy = (distanceInRadar) * (1 - cos(annotation.azimuth.toRadians + pi));
-      final center = Offset(dx + (radius / 2), dy + (radius / 2));
+          annotation.distanceFromUser / maxDistance * radius;
+      final alpha = pi - annotation.azimuth.toRadians;
+      final dx = (distanceInRadar) * sin(alpha);
+      final dy = (distanceInRadar) * cos(alpha);
+      final center = Offset(dx + radius, dy + radius);
       canvas.drawCircle(center, 3, paint);
     }
   }
