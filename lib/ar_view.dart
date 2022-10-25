@@ -27,6 +27,10 @@ class ArView extends StatefulWidget {
     this.yOffsetOverlap,
     required this.minDistanceReload,
     this.scaleWithDistance = true,
+    this.markerColor,
+    this.backgroundRadar,
+    this.radarPosition,
+    this.showRadar = true,
   }) : super(key: key);
 
   final List<ArAnnotation> annotations;
@@ -49,11 +53,25 @@ class ArView extends StatefulWidget {
   ///Scale annotation view with distance from user
   final bool scaleWithDistance;
 
+  ///Radar
+
+  /// marker color in radar
+  final Color? markerColor;
+
+  ///background radar color
+  final Color? backgroundRadar;
+
+  ///radar position in view
+  final RadarPosition? radarPosition;
+
+  ///Show radar in view
+  final bool showRadar;
+
   @override
   State<ArView> createState() => _ArViewState();
 }
 
-class _ArViewState extends State<ArView> with WidgetsBindingObserver {
+class _ArViewState extends State<ArView> {
   ArStatus arStatus = ArStatus();
 
   Position? position;
@@ -68,22 +86,6 @@ class _ArViewState extends State<ArView> with WidgetsBindingObserver {
   void dispose() {
     ArSensorManager.instance.dispose();
     super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    super.didChangeAppLifecycleState(state);
-    switch(state){
-
-      case AppLifecycleState.resumed:
-        ArSensorManager.instance.init();
-        break;
-      case AppLifecycleState.inactive:
-      case AppLifecycleState.paused:
-      case AppLifecycleState.detached:
-        ArSensorManager.instance.dispose();
-        break;
-    }
   }
 
   @override
@@ -107,11 +109,10 @@ class _ArViewState extends State<ArView> with WidgetsBindingObserver {
             _transformAnnotation(annotations);
             return Stack(
               children: [
-
                 if (kDebugMode && widget.showDebugInfoSensor)
                   Positioned(
                     bottom: 0,
-                    child: debugInfo(context, arSensor),
+                    child: _debugInfo(context, arSensor),
                   ),
                 Stack(
                   children: annotations.map(
@@ -138,17 +139,12 @@ class _ArViewState extends State<ArView> with WidgetsBindingObserver {
                     },
                   ).toList(),
                 ),
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: CustomPaint(
-                    size: Size(width / 2, width / 2),
-                    painter: RadarPainter(
-                      maxDistance: widget.maxVisibleDistance,
-                      arAnnotations: widget.annotations,
-                      heading: arSensor.heading,
-                    ),
-                  ),
-                ),
+                if (widget.showRadar)
+                  _radarPosition(
+                      context,
+                      widget.radarPosition ?? RadarPosition.topLeft,
+                      arSensor.heading,
+                      width)
               ],
             );
           }
@@ -158,7 +154,59 @@ class _ArViewState extends State<ArView> with WidgetsBindingObserver {
     );
   }
 
-  Widget debugInfo(BuildContext context, ArSensor? arSensor) {
+  Widget _radarPosition(BuildContext context, RadarPosition position,
+      double heading, double width) {
+    final radar = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: CustomPaint(
+        size: Size(width / 2, width / 2),
+        painter: RadarPainter(
+          maxDistance: widget.maxVisibleDistance,
+          arAnnotations: widget.annotations,
+          heading: heading,
+          background: widget.backgroundRadar ?? Colors.grey,
+          markerColor: widget.markerColor ?? Colors.red,
+        ),
+      ),
+    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    switch (position) {
+      case RadarPosition.topCenter:
+        return Positioned(
+          top: 0,
+          left: screenWidth / 2 - width / 4,
+          child: radar,
+        );
+      case RadarPosition.topRight:
+        return Positioned(
+          top: 0,
+          right: 0,
+          child: radar,
+        );
+      case RadarPosition.bottomLeft:
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          child: radar,
+        );
+      case RadarPosition.bottomCenter:
+        return Positioned(
+          bottom: 0,
+          left: screenWidth / 2 - width / 4,
+          child: radar,
+        );
+      case RadarPosition.bottomRight:
+        return Positioned(
+          bottom: 0,
+          right: 0,
+          child: radar,
+        );
+      default:
+        return radar;
+    }
+  }
+
+  Widget _debugInfo(BuildContext context, ArSensor? arSensor) {
     return Container(
       color: Colors.white,
       width: MediaQuery.of(context).size.width,

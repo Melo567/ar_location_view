@@ -4,16 +4,25 @@ import 'package:flutter/material.dart';
 
 import 'ar_location_view.dart';
 
+enum RadarPosition {
+  topLeft,
+  topCenter,
+  topRight,
+  bottomLeft,
+  bottomCenter,
+  bottomRight,
+}
+
 class RadarPainter extends CustomPainter {
   const RadarPainter({
     required this.maxDistance,
     required this.arAnnotations,
     required this.heading,
-    this.markerColor = Colors.red,
-    this.background = Colors.grey,
+    required this.markerColor,
+    required this.background,
   });
 
-  final angle = pi / 6;
+  final angle = pi / 7;
 
   final Color markerColor;
   final Color background;
@@ -29,13 +38,26 @@ class RadarPainter extends CustomPainter {
     final center = Offset(radius, radius);
     final Paint paint = Paint()..color = background.withAlpha(100);
     final Path path = Path();
-    path.moveTo(radius * (1 - sin(angleView)), radius * (1 - cos(angleView)));
+    final pointA =
+        Offset(radius * (1 - sin(angleView)), radius * (1 - cos(angleView)));
+    final pointB =
+        Offset(radius * (1 - sin(angleView1)), radius * (1 - cos(angleView1)));
+    path.moveTo(pointA.dx, pointA.dy);
     path.lineTo(radius, radius);
-    path.lineTo(radius * (1 - sin(angleView1)), radius * (1 - cos(angleView1)));
+    path.lineTo(pointB.dx, pointB.dy);
+    path.arcToPoint(pointA, radius: Radius.circular(radius));
+
     final Paint paint2 = Paint()
-      ..color = Colors.green.withAlpha(200)
-      ..strokeWidth = 1
-      ..style = PaintingStyle.stroke;
+      ..shader = RadialGradient(
+        colors: [
+          Colors.blueAccent.withAlpha(168),
+          Colors.blueAccent.withAlpha(20),
+        ],
+      ).createShader(Rect.fromCircle(
+        center: Offset(radius, radius),
+        radius: radius,
+      ))
+      ..style = PaintingStyle.fill;
     canvas.drawCircle(center, radius, paint);
     canvas.drawPath(path, paint2);
     drawMarker(canvas, arAnnotations, radius);

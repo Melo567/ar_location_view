@@ -25,6 +25,7 @@ class _MyAppState extends State<MyApp> {
         body: ArLocationWidget(
           annotations: annotations,
           showDebugInfoSensor: false,
+          radarPosition: RadarPosition.bottomCenter,
           annotationViewBuilder: (context, annotation) {
             return AnnotationView(
               key: ValueKey(annotation.uid),

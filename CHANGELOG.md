@@ -1,6 +1,6 @@
-## 1.1.4
+## 2.0.0
 
-* Add documentation.
+* Add radar.
 
 ## 1.0.0
 

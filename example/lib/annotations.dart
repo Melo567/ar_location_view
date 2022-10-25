@@ -18,6 +18,7 @@ AnnotationType getRandomAnnotation() {
   return types[index];
 }
 
+///Create fake annotations for example
 List<Annotation> fakeAnnotation(
     {required Position position, int distance = 1500, int numberMaxPoi = 100}) {
   return List<Annotation>.generate(
