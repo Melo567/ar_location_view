@@ -32,11 +32,12 @@ class ArSensorManager {
   double _heading = 0.0;
   double _compassAccuracy = 0.0;
 
-  final StreamController<ArSensor> _arSensor = StreamController();
+  late StreamController<ArSensor> _arSensorController;
 
   List<double> pitchHistory = [];
 
   void init() {
+    _arSensorController = StreamController();
     _checkLocationPermission();
   }
 
@@ -98,10 +99,10 @@ class ArSensorManager {
       orientation: _orientation,
       compassAccuracy: _compassAccuracy,
     );
-    _arSensor.add(arSensor);
+    _arSensorController.add(arSensor);
   }
 
-  Stream<ArSensor> get arSensor => _arSensor.stream;
+  Stream<ArSensor> get arSensor => _arSensorController.stream;
 
   Future<void> _checkLocationPermission() async {
     bool isLocationGranted = await Permission.location.isGranted;
@@ -117,6 +118,7 @@ class ArSensorManager {
   }
 
   void dispose() {
+    _arSensorController.close();
     _accelerationStream?.cancel();
     _userAccelerationStream?.cancel();
     _positionSubscription?.cancel();
