@@ -31,6 +31,7 @@ class ArView extends StatefulWidget {
     this.backgroundRadar,
     this.radarPosition,
     this.showRadar = true,
+    this.radarWidth,
   }) : super(key: key);
 
   final List<ArAnnotation> annotations;
@@ -66,6 +67,9 @@ class ArView extends StatefulWidget {
 
   ///Show radar in view
   final bool showRadar;
+
+  ///Radar width
+  final double? radarWidth;
 
   @override
   State<ArView> createState() => _ArViewState();
@@ -144,7 +148,9 @@ class _ArViewState extends State<ArView> {
                       context,
                       widget.radarPosition ?? RadarPosition.topLeft,
                       arSensor.heading,
-                      width)
+                      widget.radarWidth != null
+                          ? (widget.radarWidth! * 2)
+                          : width)
               ],
             );
           }

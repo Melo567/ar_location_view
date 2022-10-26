@@ -24,7 +24,7 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
         body: ArLocationWidget(
           annotations: annotations,
-          showDebugInfoSensor: false,
+          showDebugInfoSensor: true,
           radarPosition: RadarPosition.bottomCenter,
           annotationViewBuilder: (context, annotation) {
             return AnnotationView(

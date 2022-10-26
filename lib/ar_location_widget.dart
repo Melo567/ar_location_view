@@ -22,6 +22,7 @@ class ArLocationWidget extends StatefulWidget {
     this.backgroundRadar,
     this.radarPosition,
     this.showRadar = true,
+    this.radarWidth,
   }) : super(key: key);
 
   ///List of POIs
@@ -75,6 +76,9 @@ class ArLocationWidget extends StatefulWidget {
   ///Show radar in view
   final bool showRadar;
 
+  ///Radar width
+  final double? radarWidth;
+
   @override
   State<ArLocationWidget> createState() => _ArLocationWidgetState();
 }
@@ -114,6 +118,7 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
             backgroundRadar: widget.backgroundRadar,
             radarPosition: widget.radarPosition,
             showRadar: widget.showRadar,
+            radarWidth: widget.radarWidth,
           ),
         if (initCam && widget.accessory != null) widget.accessory!
       ],
