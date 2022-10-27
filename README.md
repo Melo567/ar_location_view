@@ -141,3 +141,43 @@ class AnnotationView extends StatelessWidget {
 ## License
 
 ArLocationView is released under the MIT license.
+
+## Contributors
+
+
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<table>
+    <tbody>
+        <tr>
+            <td align="center">
+                <img src="https://avatars.githubusercontent.com/u/33430575?v=4?s=100" width="100px;" alt="Pierre Rakotodimimanana" />
+                <br/>
+                <a href="https://github.com/Melo567" title="Code">
+                    <b>Pierre Rakotodimimanana</b>
+                </a>
+            </td>
+            <td align="center">
+                <img src="https://avatars.githubusercontent.com/u/92214521?s=400&u=50323c144888990cb6ad01c81d369926ecfa91a2&v=4?s=100"
+                    width="100px;" alt="Misa Johary" />
+                    <br/>
+                <a href="https://github.com/misaJohary" title="Code">
+                    <b>Misa Johary</b>
+                </a>
+            </td>
+            <td align="center"><img src="https://avatars.githubusercontent.com/u/94055176?v=4?s=100" width="100px;"
+                    alt="Jean Léonce" /><br/>
+                <a href="https://github.com/rakotoleonce2106" title="Code">
+                    <b>Jean Léonce</b>
+                </a>
+            </td>
+        </tr>
+    </tbody>
+</table>
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
