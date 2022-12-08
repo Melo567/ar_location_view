@@ -24,7 +24,9 @@ class _MyAppState extends State<MyApp> {
       home: Scaffold(
         body: ArLocationWidget(
           annotations: annotations,
-          showDebugInfoSensor: true,
+          showDebugInfoSensor: false,
+          annotationWidth: 180,
+          annotationHeight: 60,
           radarPosition: RadarPosition.bottomCenter,
           annotationViewBuilder: (context, annotation) {
             return AnnotationView(
@@ -32,6 +34,8 @@ class _MyAppState extends State<MyApp> {
               annotation: annotation as Annotation,
             );
           },
+          radarWidth: 160,
+          scaleWithDistance: false,
           onLocationChange: (Position position) {
             Future.delayed(const Duration(seconds: 5), () {
               annotations =
