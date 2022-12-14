@@ -1,3 +1,7 @@
+## 2.0.5
+
+* Solve ArPluginsNotFound for Android
+
 ## 2.0.0
 
 * Add radar.

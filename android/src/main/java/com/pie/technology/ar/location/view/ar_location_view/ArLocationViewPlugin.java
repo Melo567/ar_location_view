@@ -56,6 +56,10 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
     private float[] gravityValues = new float[3];
     private float[] magneticValues = new float[3];
 
+    public ArLocationViewPlugin(){
+
+    }
+
     private ArLocationViewPlugin(Context context) {
         display = ((DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE))
                 .getDisplay(Display.DEFAULT_DISPLAY);
