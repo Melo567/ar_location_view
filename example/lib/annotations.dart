@@ -18,8 +18,11 @@ AnnotationType getRandomAnnotation() {
   return types[index];
 }
 
-List<Annotation> fakeAnnotation(
-    {required Position position, int distance = 1500, int numberMaxPoi = 100}) {
+List<Annotation> fakeAnnotation({
+  required Position position,
+  int distance = 1500,
+  int numberMaxPoi = 100,
+}) {
   return List<Annotation>.generate(
     numberMaxPoi,
     (index) {
@@ -56,5 +59,7 @@ Position getRandomLocation(double centerLatitude, double centerLongitude,
     heading: 1,
     speed: 1,
     speedAccuracy: 1,
+    altitudeAccuracy: 0,
+    headingAccuracy: 0,
   );
 }
