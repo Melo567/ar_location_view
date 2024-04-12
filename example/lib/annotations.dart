@@ -9,7 +9,11 @@ enum AnnotationType { pharmacy, hotel, library }
 class Annotation extends ArAnnotation {
   final AnnotationType type;
 
-  Annotation({required super.uid, required super.position, required this.type});
+  Annotation({
+    required super.uid,
+    required super.position,
+    required this.type,
+  });
 }
 
 AnnotationType getRandomAnnotation() {
@@ -57,5 +61,7 @@ Position getRandomLocation(double centerLatitude, double centerLongitude,
     heading: 1,
     speed: 1,
     speedAccuracy: 1,
+    altitudeAccuracy: 0,
+    headingAccuracy: 0,
   );
 }
