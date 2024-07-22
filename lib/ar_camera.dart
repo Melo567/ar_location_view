@@ -4,10 +4,10 @@ import 'package:permission_handler/permission_handler.dart';
 
 class ArCamera extends StatefulWidget {
   const ArCamera({
-    Key? key,
+    super.key,
     required this.onCameraError,
     required this.onCameraSuccess,
-  }) : super(key: key);
+  });
 
   final Function(String error) onCameraError;
   final Function() onCameraSuccess;
@@ -50,7 +50,10 @@ class _ArCameraViewState extends State<ArCamera> {
       return SizedBox(
         width: double.infinity,
         height: double.infinity,
-        child: CameraPreview(controller!),
+        child: AspectRatio(
+          aspectRatio: 1 / controller!.value.aspectRatio,
+          child: CameraPreview(controller!),
+        ),
       );
     }
     return const Text('Camera error');

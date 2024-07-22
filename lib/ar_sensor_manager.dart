@@ -42,12 +42,12 @@ class ArSensorManager {
 
   void _initialisation() {
     _accelerationStream =
-        accelerometerEvents.listen((AccelerometerEvent event) {
+        accelerometerEventStream().listen((AccelerometerEvent event) {
       _accelerometer = Vector3(event.x, event.y, event.z);
       _calculateSensor();
     });
     _userAccelerationStream =
-        userAccelerometerEvents.listen((UserAccelerometerEvent event) {
+        userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
       _userAccelerometer = Vector3(event.x, event.y, event.z);
       _calculateSensor();
     });
