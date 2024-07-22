@@ -14,7 +14,7 @@ typedef ChangeLocationCallback = void Function(Position position);
 
 class ArView extends StatefulWidget {
   const ArView({
-    Key? key,
+    super.key,
     required this.annotations,
     required this.annotationViewBuilder,
     required this.frame,
@@ -32,7 +32,7 @@ class ArView extends StatefulWidget {
     this.radarPosition,
     this.showRadar = true,
     this.radarWidth,
-  }) : super(key: key);
+  });
 
   final List<ArAnnotation> annotations;
   final AnnotationViewBuilder annotationViewBuilder;
@@ -345,8 +345,12 @@ class _ArViewState extends State<ArView> {
       widget.onLocationChange(newPosition);
       position = newPosition;
     } else {
-      final distance = Geolocator.distanceBetween(position!.latitude,
-          position!.longitude, newPosition.latitude, newPosition.longitude);
+      final distance = Geolocator.distanceBetween(
+        position!.latitude,
+        position!.longitude,
+        newPosition.latitude,
+        newPosition.longitude,
+      );
       if (distance > widget.minDistanceReload) {
         widget.onLocationChange(newPosition);
         widget.onLocationChange(newPosition);

@@ -1,3 +1,8 @@
+## 2.0.11
+
+* Update dependencies
+* add permission HIGH_SAMPLING_RATE_SENSORS for android 12
+
 ## 2.0.5
 
 * Solve ArPluginsNotFound for Android

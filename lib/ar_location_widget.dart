@@ -4,7 +4,7 @@ import 'ar_location_view.dart';
 
 class ArLocationWidget extends StatefulWidget {
   const ArLocationWidget({
-    Key? key,
+    super.key,
     required this.annotations,
     required this.annotationViewBuilder,
     required this.onLocationChange,
@@ -23,7 +23,7 @@ class ArLocationWidget extends StatefulWidget {
     this.radarPosition,
     this.showRadar = true,
     this.radarWidth,
-  }) : super(key: key);
+  });
 
   ///List of POIs
   final List<ArAnnotation> annotations;
