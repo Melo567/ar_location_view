@@ -157,6 +157,11 @@ class AnnotationView extends StatelessWidget {
   }
 }
 ```
+## Created by [@Melo567](https://github.com/Melo567)
+
+Liked some of my work? Buy me a coffee. Thanks for your support :heart:
+
+<a href="https://buymeacoffee.com/Melo567" target="_blank"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-blue.png" alt="Buy Me A Coffee" height=64></a>
 
 ## License
 
