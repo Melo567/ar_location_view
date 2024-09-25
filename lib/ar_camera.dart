@@ -47,9 +47,9 @@ class _ArCameraViewState extends State<ArCamera> {
       );
     }
     if (isCameraAuthorize && isCameraInitialize) {
-      return SizedBox(
-        width: double.infinity,
-        height: double.infinity,
+      return Transform.scale(
+        scale: MediaQuery.of(context).devicePixelRatio /
+            controller!.value.aspectRatio,
         child: AspectRatio(
           aspectRatio: 1 / controller!.value.aspectRatio,
           child: CameraPreview(controller!),

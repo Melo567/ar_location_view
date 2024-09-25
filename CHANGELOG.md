@@ -1,3 +1,7 @@
+## 2.0.16
+
+* Solve scale camera
+
 ## 2.0.11
 
 * Update dependencies
