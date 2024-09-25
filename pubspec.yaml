@@ -1,6 +1,6 @@
 name: ar_location_view
 description: ArLocationView is designed to used in areas with large concentration of static POIs
-version: 2.0.12
+version: 2.0.13
 homepage: 'https://github.com/Melo567/ar_location_view.git'
 
 environment:

@@ -1,4 +1,4 @@
-## 2.0.16
+## 2.0.12
 
 * Solve scale camera
 
