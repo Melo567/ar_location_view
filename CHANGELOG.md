@@ -1,3 +1,6 @@
+## 2.0.15
+* Update gradle
+
 ## 2.0.12
 
 * Solve scale camera
