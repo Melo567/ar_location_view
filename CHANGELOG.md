@@ -1,3 +1,6 @@
+## 20.16
+* Upgrade sensor
+
 ## 2.0.15
 * Update gradle
 

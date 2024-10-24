@@ -38,7 +38,7 @@ class _MyAppState extends State<MyApp> {
           scaleWithDistance: false,
           onLocationChange: (Position position) {
             Future.delayed(const Duration(seconds: 5), () {
-              annotations = fakeAnnotation(position: position, numberMaxPoi: 0);
+              annotations = fakeAnnotation(position: position, numberMaxPoi: 10);
               setState(() {});
             });
           },
