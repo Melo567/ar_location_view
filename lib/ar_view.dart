@@ -141,7 +141,7 @@ class _ArViewState extends State<ArView> {
                         ),
                       );
                     },
-                  ).toList(),
+                  ).toList().reversed.toList(),
                 ),
                 if (widget.showRadar)
                   _radarPosition(

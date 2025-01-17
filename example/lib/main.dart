@@ -27,6 +27,7 @@ class _MyAppState extends State<MyApp> {
           showDebugInfoSensor: false,
           annotationWidth: 180,
           annotationHeight: 60,
+          yOffsetOverlap: 20,
           radarPosition: RadarPosition.bottomCenter,
           annotationViewBuilder: (context, annotation) {
             return AnnotationView(
