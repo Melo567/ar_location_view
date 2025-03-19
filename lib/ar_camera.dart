@@ -47,15 +47,12 @@ class _ArCameraViewState extends State<ArCamera> {
       );
     }
     if (isCameraAuthorize && isCameraInitialize) {
-      return SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: AspectRatio(
-          aspectRatio: 1 / controller!.value.aspectRatio,
-          child: CameraPreview(controller!),
+      return SizedBox.expand(
+        child: FittedBox(
+          fit: BoxFit.cover,
+          child: SizedBox(width: 100, child: CameraPreview(controller!)),
         ),
-      );
-    }
+      );    }
     return const Text('Camera error');
   }
 
