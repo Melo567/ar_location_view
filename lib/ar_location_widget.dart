@@ -17,6 +17,13 @@ class ArLocationWidget extends StatefulWidget {
     this.yOffsetOverlap,
     this.accessory,
     this.minDistanceReload = 50,
+    this.scaleWithDistance = true,
+    this.markerColor,
+    this.backgroundRadar,
+    this.radarPosition,
+    this.showRadar = true,
+    this.radarWidth,
+    this.aspectRatio,
   });
 
   ///List of POIs
@@ -55,6 +62,26 @@ class ArLocationWidget extends StatefulWidget {
   ///Min distance reload
   final double minDistanceReload;
 
+  ///Scale annotation view with distance from user
+  final bool scaleWithDistance;
+
+  /// marker color in radar
+  final Color? markerColor;
+
+  ///background radar color
+  final Color? backgroundRadar;
+
+  ///radar position in view
+  final RadarPosition? radarPosition;
+
+  ///Show radar in view
+  final bool showRadar;
+
+  ///Radar width
+  final double? radarWidth;
+
+  final double? aspectRatio;
+
   @override
   State<ArLocationWidget> createState() => _ArLocationWidgetState();
 }
@@ -64,8 +91,10 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return IndexedStack(
+      index: 0,
       children: [
+        // Camera stays alive
         ArCamera(
           onCameraError: (String error) {
             initCam = false;
@@ -75,26 +104,34 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
             initCam = true;
             setState(() {});
           },
+          aspectRatio: widget.aspectRatio ?? 4 / 3,
         ),
+        // Overlays/annotations can rebuild
         if (initCam)
-          ArView(
-            annotations: widget.annotations,
-            annotationViewBuilder: widget.annotationViewBuilder,
-            frame: widget.frame ??
-                const Size(
-                  100,
-                  75,
-                ),
-            onLocationChange: widget.onLocationChange,
-            annotationWidth: widget.annotationWidth,
-            annotationHeight: widget.annotationHeight,
-            maxVisibleDistance: widget.maxVisibleDistance,
-            showDebugInfoSensor: widget.showDebugInfoSensor,
-            paddingOverlap: widget.paddingOverlap,
-            yOffsetOverlap: widget.yOffsetOverlap,
-            minDistanceReload: widget.minDistanceReload,
+          Stack(
+            children: [
+              ArView(
+                annotations: widget.annotations,
+                annotationViewBuilder: widget.annotationViewBuilder,
+                frame: widget.frame ?? const Size(100, 75),
+                onLocationChange: widget.onLocationChange,
+                annotationWidth: widget.annotationWidth,
+                annotationHeight: widget.annotationHeight,
+                maxVisibleDistance: widget.maxVisibleDistance,
+                showDebugInfoSensor: widget.showDebugInfoSensor,
+                paddingOverlap: widget.paddingOverlap,
+                yOffsetOverlap: widget.yOffsetOverlap,
+                minDistanceReload: widget.minDistanceReload,
+                scaleWithDistance: widget.scaleWithDistance,
+                markerColor: widget.markerColor,
+                backgroundRadar: widget.backgroundRadar,
+                radarPosition: widget.radarPosition,
+                showRadar: widget.showRadar,
+                radarWidth: widget.radarWidth,
+              ),
+              if (widget.accessory != null) widget.accessory!,
+            ],
           ),
-        if (widget.accessory != null) widget.accessory!
       ],
     );
   }
