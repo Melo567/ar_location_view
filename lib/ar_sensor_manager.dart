@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
@@ -13,6 +12,9 @@ class ArSensorManager {
   static final ArSensorManager instance = ArSensorManager._internal();
 
   ArSensorManager._internal();
+
+  /// Smoothing factor for heading/pitch. Higher = smoother, less vibration. Default 0.1
+  double smoothingAlpha = 0.1;
 
   StreamSubscription<AccelerometerEvent>? _accelerationStream;
   StreamSubscription<CompassEvent>? _headingStream;
@@ -31,29 +33,30 @@ class ArSensorManager {
 
   double _heading = 0.0;
   double _compassAccuracy = 0.0;
+  double _filteredPitch = 0.0;
 
-  final StreamController<ArSensor> _arSensor = StreamController();
-
-  List<double> pitchHistory = [];
+  late StreamController<ArSensor> _arSensorController;
 
   void init() {
+    _arSensorController = StreamController();
     _checkLocationPermission();
   }
 
   void _initialisation() {
     _accelerationStream =
-        accelerometerEventStream().listen((AccelerometerEvent event) {
+        accelerometerEvents.listen((AccelerometerEvent event) {
       _accelerometer = Vector3(event.x, event.y, event.z);
       _calculateSensor();
     });
     _userAccelerationStream =
-        userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
+        userAccelerometerEvents.listen((UserAccelerometerEvent event) {
       _userAccelerometer = Vector3(event.x, event.y, event.z);
       _calculateSensor();
     });
     _headingStream = ArCompass.events?.listen((CompassEvent event) {
       if (event.heading != null && event.accuracy != null) {
-        _heading = event.heading!;
+        _heading = ArMath.exponentialFilter(
+            event.heading!, _heading, smoothingAlpha, true);
         _compassAccuracy = event.accuracy!;
         _calculateSensor();
       }
@@ -83,25 +86,20 @@ class ArSensorManager {
       orientation: _orientation,
     );
 
-    pitchHistory.add(pitch);
-
-    const serieLength = 100;
-    const alpha = 0.009;
-    if (pitchHistory.length > serieLength) {
-      pitchHistory = pitchHistory.sublist(pitchHistory.length - serieLength);
-    }
+    _filteredPitch =
+        ArMath.exponentialFilter(pitch, _filteredPitch, smoothingAlpha, false);
 
     final arSensor = ArSensor(
-      heading: _heading,
-      pitch: _filterExponantial(pitchHistory, alpha),
+      heading: ArMath.normalizeDegree(_heading),
+      pitch: _filteredPitch,
       location: _position,
       orientation: _orientation,
       compassAccuracy: _compassAccuracy,
     );
-    _arSensor.add(arSensor);
+    _arSensorController.add(arSensor);
   }
 
-  Stream<ArSensor> get arSensor => _arSensor.stream;
+  Stream<ArSensor> get arSensor => _arSensorController.stream;
 
   Future<void> _checkLocationPermission() async {
     bool isLocationGranted = await Permission.location.isGranted;
@@ -117,20 +115,11 @@ class ArSensorManager {
   }
 
   void dispose() {
+    _arSensorController.close();
     _accelerationStream?.cancel();
     _userAccelerationStream?.cancel();
     _positionSubscription?.cancel();
     _orientationStreamSubscription?.cancel();
     _headingStream?.cancel();
-  }
-
-  double _filterExponantial(List<double> numbers, double alpha) {
-    final coef = 1 - alpha;
-    final temps = numbers.reversed.toList();
-    double sum = 0.0;
-    for (int i = 0; i < temps.length; i++) {
-      sum += pow(coef, i) * temps[i];
-    }
-    return alpha * sum;
   }
 }

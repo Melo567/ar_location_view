@@ -1,4 +1,4 @@
-import 'package:camera/camera.dart';
+import 'package:camerawesome/camerawesome_plugin.dart';
 import 'package:flutter/material.dart';
 import 'package:permission_handler/permission_handler.dart';
 
@@ -7,94 +7,107 @@ class ArCamera extends StatefulWidget {
     super.key,
     required this.onCameraError,
     required this.onCameraSuccess,
+    this.aspectRatio = 1 / 1,
   });
 
   final Function(String error) onCameraError;
   final Function() onCameraSuccess;
+  final double aspectRatio;
 
   @override
   State<ArCamera> createState() => _ArCameraViewState();
 }
 
 class _ArCameraViewState extends State<ArCamera> {
-  CameraController? controller;
-
   bool isCameraAuthorize = false;
-  bool isCameraInitialize = false;
 
   @override
   void initState() {
     super.initState();
-    _initializeCamera();
+
+    _requestCameraAuthorization();
   }
 
   @override
   void dispose() {
     super.dispose();
-    controller?.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
     if (!isCameraAuthorize) {
-      return const Center(
-        child: Text('Need camera authorization'),
-      );
+      return _showCirularLoading(context);
     }
-    if (!isCameraInitialize) {
-      return const Center(
-        child: CircularProgressIndicator(),
-      );
-    }
-    if (isCameraAuthorize && isCameraInitialize) {
-      return SizedBox(
-        width: double.infinity,
-        height: double.infinity,
-        child: AspectRatio(
-          aspectRatio: 1 / controller!.value.aspectRatio,
-          child: CameraPreview(controller!),
+
+    if (isCameraAuthorize) {
+      return AspectRatio(
+        aspectRatio: widget.aspectRatio,
+        child: CameraAwesomeBuilder.custom(
+          saveConfig: SaveConfig.photo(),
+          previewFit: CameraPreviewFit.cover,
+          sensorConfig: SensorConfig.single(
+            sensor: Sensor.position(SensorPosition.back),
+            flashMode: FlashMode.none,
+            aspectRatio: CameraAspectRatios.ratio_1_1,
+            zoom: 0.0,
+          ),
+          progressIndicator: _showCirularLoading(context),
+          imageAnalysisConfig: AnalysisConfig(
+            androidOptions: const AndroidAnalysisOptions.nv21(
+              width: 250,
+            ),
+            maxFramesPerSecond: 5,
+          ),
+          builder: (state, preview) {
+            return IgnorePointer(
+              child: StreamBuilder(
+                  stream: state.sensorConfig$,
+                  builder: (_, snapshot) {
+                    return const SizedBox();
+                  }),
+            );
+          },
         ),
       );
     }
     return const Text('Camera error');
   }
 
-  Future<void> _initializeCamera() async {
+  Future<void> _requestCameraAuthorization() async {
     try {
-      await _requestCameraAuthorization();
-      if (isCameraAuthorize) {
-        final cameras = await availableCameras();
-        controller = CameraController(
-          cameras[0],
-          ResolutionPreset.max,
-          enableAudio: false,
-        );
-        await controller?.initialize();
-        isCameraInitialize = true;
+      var isGranted = await Permission.camera.isGranted;
+      if (!isGranted) {
+        await Permission.camera.request();
+        isGranted = await Permission.camera.isGranted;
+        if (!isGranted) {
+          widget.onCameraError('Camera need authorization permission');
+        } else {
+          isCameraAuthorize = true;
+          setState(() {});
+
+          widget.onCameraSuccess();
+        }
+      } else {
+        isCameraAuthorize = true;
+        setState(() {});
         widget.onCameraSuccess();
       }
     } catch (ex) {
-      widget.onCameraError('On error when camera initialize');
-      isCameraInitialize = false;
+      widget.onCameraError('Camera need authorization permission');
     } finally {
       setState(() {});
     }
   }
 
-  Future<void> _requestCameraAuthorization() async {
-    var isGranted = await Permission.camera.isGranted;
-    if (!isGranted) {
-      await Permission.camera.request();
-      isGranted = await Permission.camera.isGranted;
-      if (!isGranted) {
-        widget.onCameraError('Camera need authorization permission');
-      } else {
-        isCameraAuthorize = true;
-        setState(() {});
-      }
-    } else {
-      isCameraAuthorize = true;
-      setState(() {});
-    }
+  Widget _showCirularLoading(context) {
+    return Container(
+        alignment: Alignment.center,
+        height: MediaQuery.of(context).size.height,
+        width: MediaQuery.of(context).size.width,
+        child: const SizedBox(
+          height: 70.0,
+          width: 70.0,
+          child: CircularProgressIndicator(),
+        ));
   }
 }

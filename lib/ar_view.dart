@@ -1,4 +1,5 @@
 import 'dart:math';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:geolocator/geolocator.dart';
@@ -14,7 +15,7 @@ typedef ChangeLocationCallback = void Function(Position position);
 
 class ArView extends StatefulWidget {
   const ArView({
-    Key? key,
+    super.key,
     required this.annotations,
     required this.annotationViewBuilder,
     required this.frame,
@@ -26,7 +27,13 @@ class ArView extends StatefulWidget {
     this.paddingOverlap = 5,
     this.yOffsetOverlap,
     required this.minDistanceReload,
-  }) : super(key: key);
+    this.scaleWithDistance = true,
+    this.markerColor,
+    this.backgroundRadar,
+    this.radarPosition,
+    this.showRadar = true,
+    this.radarWidth,
+  });
 
   final List<ArAnnotation> annotations;
   final AnnotationViewBuilder annotationViewBuilder;
@@ -44,6 +51,26 @@ class ArView extends StatefulWidget {
   final double paddingOverlap;
   final double? yOffsetOverlap;
   final double minDistanceReload;
+
+  ///Scale annotation view with distance from user
+  final bool scaleWithDistance;
+
+  ///Radar
+
+  /// marker color in radar
+  final Color? markerColor;
+
+  ///background radar color
+  final Color? backgroundRadar;
+
+  ///radar position in view
+  final RadarPosition? radarPosition;
+
+  ///Show radar in view
+  final bool showRadar;
+
+  ///Radar width
+  final double? radarWidth;
 
   @override
   State<ArView> createState() => _ArViewState();
@@ -90,25 +117,50 @@ class _ArViewState extends State<ArView> {
                 if (kDebugMode && widget.showDebugInfoSensor)
                   Positioned(
                     bottom: 0,
-                    child: debugInfo(context, arSensor),
+                    child: _debugInfo(context, arSensor),
                   ),
                 Stack(
-                    children: annotations.map(
-                  (e) {
-                    return Positioned(
-                      left: e.arPosition.dx,
-                      top: e.arPosition.dy + height * 0.5,
-                      child: Transform.translate(
-                        offset: Offset(0, e.arPositionOffset.dy),
-                        child: SizedBox(
-                          width: widget.annotationWidth,
-                          height: widget.annotationHeight,
-                          child: widget.annotationViewBuilder(context, e),
+                  children: annotations.map(
+                    (e) {
+                      // Clamp position
+                      double left = e.arPosition.dx;
+                      double top = e.arPosition.dy + height * 0.5;
+                      left = left.clamp(0.0, width - widget.annotationWidth);
+                      top = top.clamp(0.0, height - widget.annotationHeight);
+                      // Clamp scale
+                      double scale = widget.scaleWithDistance
+                          ? (1 -
+                              (e.distanceFromUser /
+                                  (widget.maxVisibleDistance + 280)))
+                          : 1.0;
+                      scale = scale.clamp(0.5, 1.0);
+                      return AnimatedPositioned(
+                        duration: const Duration(milliseconds: 300),
+                        left: left,
+                        top: top,
+                        child: Transform.translate(
+                          offset: Offset(0, e.arPositionOffset.dy),
+                          child: Transform.scale(
+                            scale: scale,
+                            child: SizedBox(
+                              width: widget.annotationWidth,
+                              height: widget.annotationHeight,
+                              child: widget.annotationViewBuilder(context, e),
+                            ),
+                          ),
                         ),
-                      ),
-                    );
-                  },
-                ).toList()),
+                      );
+                    },
+                  ).toList(),
+                ),
+                if (widget.showRadar)
+                  _radarPosition(
+                      context,
+                      widget.radarPosition ?? RadarPosition.topLeft,
+                      arSensor.heading,
+                      widget.radarWidth != null
+                          ? (widget.radarWidth! * 2)
+                          : width)
               ],
             );
           }
@@ -118,7 +170,59 @@ class _ArViewState extends State<ArView> {
     );
   }
 
-  Widget debugInfo(BuildContext context, ArSensor? arSensor) {
+  Widget _radarPosition(BuildContext context, RadarPosition position,
+      double heading, double width) {
+    final radar = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: CustomPaint(
+        size: Size(width / 2, width / 2),
+        painter: RadarPainter(
+          maxDistance: widget.maxVisibleDistance,
+          arAnnotations: widget.annotations,
+          heading: heading,
+          background: widget.backgroundRadar ?? Colors.black,
+          markerColor: widget.markerColor ?? Colors.red,
+        ),
+      ),
+    );
+    final screenWidth = MediaQuery.of(context).size.width;
+    switch (position) {
+      case RadarPosition.topCenter:
+        return Positioned(
+          top: 0,
+          left: screenWidth / 2 - width / 4,
+          child: radar,
+        );
+      case RadarPosition.topRight:
+        return Positioned(
+          top: 0,
+          right: 0,
+          child: radar,
+        );
+      case RadarPosition.bottomLeft:
+        return Positioned(
+          bottom: 0,
+          left: 0,
+          child: radar,
+        );
+      case RadarPosition.bottomCenter:
+        return Positioned(
+          bottom: 80,
+          left: screenWidth / 2 - width / 4,
+          child: radar,
+        );
+      case RadarPosition.bottomRight:
+        return Positioned(
+          bottom: 0,
+          right: 0,
+          child: radar,
+        );
+      default:
+        return radar;
+    }
+  }
+
+  Widget _debugInfo(BuildContext context, ArSensor? arSensor) {
     return Container(
       color: Colors.white,
       width: MediaQuery.of(context).size.width,
@@ -140,7 +244,9 @@ class _ArViewState extends State<ArView> {
 
   Widget loading() {
     return const Center(
-      child: CircularProgressIndicator(),
+      child: CircularProgressIndicator(
+        color: Colors.white,
+      ),
     );
   }
 
@@ -148,16 +254,20 @@ class _ArViewState extends State<ArView> {
       NativeDeviceOrientation orientation, double width, double height) {
     double hFov = 0;
     double vFov = 0;
-    const tempFOv = 58.0;
+    const tempFOv = 58.0; // زاوية الرؤية الأساسية
 
     if (orientation == NativeDeviceOrientation.landscapeLeft ||
         orientation == NativeDeviceOrientation.landscapeRight) {
+      // التركيز على الاتجاه الأفقي (يمين-يسار)
       hFov = tempFOv;
       vFov = (2 * atan(tan((hFov / 2).toRadians) * (height / width))).toDegrees;
     } else {
+      // التركيز على الاتجاه الرأسي
       vFov = tempFOv;
       hFov = (2 * atan(tan((vFov / 2).toRadians) * (width / height))).toDegrees;
     }
+
+    // تحديث قيم الزوايا والأبعاد بناءً على الحركة الأفقية
     arStatus.hFov = hFov;
     arStatus.vFov = vFov;
     arStatus.hPixelPerDegree = hFov > 0 ? (width / hFov) : 0;
@@ -202,13 +312,17 @@ class _ArViewState extends State<ArView> {
 
   List<ArAnnotation> _filterAndSortArAnnotation(List<ArAnnotation> annotations,
       ArSensor arSensor, Position deviceLocation) {
-    List<ArAnnotation> temps = _calculateDistanceAndBearingFromUser(
+    print('DEBUG: Received annotations count: \\${annotations.length}');
+    final List<ArAnnotation> temps = _calculateDistanceAndBearingFromUser(
         annotations, deviceLocation, arSensor);
-    temps = annotations
-        .where(
-            (element) => element.distanceFromUser < widget.maxVisibleDistance)
-        .toList();
-    temps = _visibleAnnotations(temps, arSensor.heading);
+    // TEMP: Relax filtering for debugging
+    // temps = annotations
+    //     .where(
+    //         (element) => element.distanceFromUser < widget.maxVisibleDistance)
+    //     .toList();
+    // temps = _visibleAnnotations(temps, arSensor.heading);
+    // For debugging, show all annotations
+    print('DEBUG: After distance/visibility filtering: \\${temps.length}');
     return temps;
   }
 
