@@ -1,8 +1,7 @@
-library ar_location_view;
-
 export 'ar_annotation.dart';
 export 'ar_camera.dart';
 export 'ar_compass.dart';
+export 'ar_compass_calibration_overlay.dart';
 export 'ar_extension.dart';
 export 'ar_location_widget.dart';
 export 'ar_math.dart';

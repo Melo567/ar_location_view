@@ -29,6 +29,12 @@ class ArLocationViewPlugin : FlutterPlugin, StreamHandler {
         private const val ALPHA = 0.45f
         private const val COMPASS_UPDATE_RATE_MS = 10L
         private const val CHANNEL_NAME = "pie/ar_view_location"
+
+        // Calibration status constants matching SensorManager accuracy
+        const val CALIBRATION_STATUS_UNRELIABLE = 0
+        const val CALIBRATION_STATUS_LOW = 1
+        const val CALIBRATION_STATUS_MEDIUM = 2
+        const val CALIBRATION_STATUS_HIGH = 3
     }
 
     private var display: Display? = null
@@ -198,10 +204,19 @@ class ArLocationViewPlugin : FlutterPlugin, StreamHandler {
             SensorManager.getOrientation(adjustedRotationMatrix, orientation)
         }
 
-        val heading = DoubleArray(3).apply {
+        // Convert sensor accuracy to calibration status
+        val calibrationStatus = when (lastAccuracySensorStatus) {
+            SensorManager.SENSOR_STATUS_ACCURACY_HIGH -> CALIBRATION_STATUS_HIGH
+            SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM -> CALIBRATION_STATUS_MEDIUM
+            SensorManager.SENSOR_STATUS_ACCURACY_LOW -> CALIBRATION_STATUS_LOW
+            else -> CALIBRATION_STATUS_UNRELIABLE
+        }
+
+        val heading = DoubleArray(4).apply {
             this[0] = Math.toDegrees(orientation[0].toDouble())
             this[1] = 0.0 // headingForCameraMode (calculated on iOS side)
             this[2] = lastAccuracySensorStatus.toDouble()
+            this[3] = calibrationStatus.toDouble() // Calibration status for Flutter
         }
 
         events.success(heading.toList())
