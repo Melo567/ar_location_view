@@ -2,11 +2,14 @@ import 'package:flutter/material.dart';
 
 import 'annotations.dart';
 
+/// Widget displaying an AR annotation with icon and distance.
+///
+/// Uses Dart 3 switch expressions for cleaner icon/color selection.
 class AnnotationView extends StatelessWidget {
   const AnnotationView({
-    Key? key,
+    super.key,
     required this.annotation,
-  }) : super(key: key);
+  });
 
   final Annotation annotation;
 
@@ -27,7 +30,7 @@ class AnnotationView extends StatelessWidget {
                   bottomLeft: Radius.circular(5),
                 ),
               ),
-              child: typeFactory(annotation.type),
+              child: _buildIcon(annotation.type),
             ),
           ),
           Expanded(
@@ -39,7 +42,7 @@ class AnnotationView extends StatelessWidget {
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   Text(
-                    annotation.type.toString().substring(15),
+                    annotation.type.name,
                     maxLines: 1,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
@@ -49,29 +52,22 @@ class AnnotationView extends StatelessWidget {
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
-  Widget typeFactory(AnnotationType type) {
-    IconData iconData = Icons.ac_unit_outlined;
-    Color color = Colors.teal;
-    switch (type) {
-      case AnnotationType.pharmacy:
-        iconData = Icons.local_pharmacy_outlined;
-        color = Colors.red;
-        break;
-      case AnnotationType.hotel:
-        iconData = Icons.hotel_outlined;
-        color = Colors.green;
-        break;
-      case AnnotationType.library:
-        iconData = Icons.library_add_outlined;
-        color = Colors.blue;
-        break;
-    }
+  /// Builds the icon widget based on annotation type.
+  ///
+  /// Uses Dart 3 switch expression for concise mapping.
+  Widget _buildIcon(AnnotationType type) {
+    final (iconData, color) = switch (type) {
+      AnnotationType.pharmacy => (Icons.local_pharmacy_outlined, Colors.red),
+      AnnotationType.hotel => (Icons.hotel_outlined, Colors.green),
+      AnnotationType.library => (Icons.library_add_outlined, Colors.blue),
+    };
+
     return Icon(
       iconData,
       size: 40,

@@ -4,9 +4,23 @@ import 'package:ar_location_view/ar_annotation.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:uuid/uuid.dart';
 
-enum AnnotationType { pharmacy, hotel, library }
+/// Types of annotations available in the example.
+enum AnnotationType {
+  pharmacy,
+  hotel,
+  library;
 
-class Annotation extends ArAnnotation {
+  /// Returns a random annotation type.
+  static AnnotationType random() {
+    final index = Random.secure().nextInt(values.length);
+    return values[index];
+  }
+}
+
+/// Custom annotation extending the base ArAnnotation.
+///
+/// Uses Dart 3 `base class` modifier for controlled inheritance.
+final class Annotation extends ArAnnotation {
   final AnnotationType type;
 
   Annotation({
@@ -14,47 +28,53 @@ class Annotation extends ArAnnotation {
     required super.position,
     required this.type,
   });
+
+  @override
+  String toString() => 'Annotation(type: $type, ${super.toString()})';
 }
 
-AnnotationType getRandomAnnotation() {
-  final types = AnnotationType.values.toList();
-  final index = Random.secure().nextInt(types.length);
-  return types[index];
-}
+/// Creates fake annotations for demonstration purposes.
+///
+/// [position] - Center position for generating annotations
+/// [distance] - Maximum distance in meters
+/// [numberMaxPoi] - Number of annotations to generate
+List<Annotation> fakeAnnotation({
+  required Position position,
+  int distance = 1500,
+  int numberMaxPoi = 100,
+}) {
+  const uuid = Uuid();
 
-///Create fake annotations for example
-List<Annotation> fakeAnnotation(
-    {required Position position, int distance = 1500, int numberMaxPoi = 100}) {
-  return List<Annotation>.generate(
+  return List.generate(
     numberMaxPoi,
-    (index) {
-      return Annotation(
-        uid: const Uuid().v1(),
-        position: getRandomLocation(
-          position.latitude,
-          position.longitude,
-          distance / 100000,
-          distance / 100000,
-        ),
-        type: getRandomAnnotation(),
-      );
-    },
+    (_) => Annotation(
+      uid: uuid.v4(),
+      position: _getRandomLocation(
+        centerLatitude: position.latitude,
+        centerLongitude: position.longitude,
+        deltaLat: distance / 100000,
+        deltaLon: distance / 100000,
+      ),
+      type: AnnotationType.random(),
+    ),
   );
 }
 
-Position getRandomLocation(double centerLatitude, double centerLongitude,
-    double deltaLat, double deltaLon) {
-  var lat = centerLatitude;
-  var lon = centerLongitude;
+/// Generates a random position within a delta range of the center.
+Position _getRandomLocation({
+  required double centerLatitude,
+  required double centerLongitude,
+  required double deltaLat,
+  required double deltaLon,
+}) {
+  final random = Random.secure();
 
-  final latDelta = -(deltaLat / 2) + Random.secure().nextDouble() * deltaLat;
-  final lonDelta = -(deltaLon / 2) + Random.secure().nextDouble() * deltaLon;
-  lat = lat + latDelta;
-  lon = lon + lonDelta;
+  final latDelta = -(deltaLat / 2) + random.nextDouble() * deltaLat;
+  final lonDelta = -(deltaLon / 2) + random.nextDouble() * deltaLon;
 
   return Position(
-    longitude: lon,
-    latitude: lat,
+    latitude: centerLatitude + latDelta,
+    longitude: centerLongitude + lonDelta,
     timestamp: DateTime.now(),
     accuracy: 1,
     altitude: 1,

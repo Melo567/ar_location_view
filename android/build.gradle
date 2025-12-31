@@ -2,17 +2,14 @@ group 'com.pie.technology.ar.location.view.ar_location_view'
 version '1.0'
 
 buildscript {
-    ext {
-        kotlin_version = "1.8.22"
-        agp_version = '7.4.2'
-    }
+    ext.kotlin_version = "2.1.0"
     repositories {
         google()
         mavenCentral()
     }
 
     dependencies {
-        classpath("com.android.tools.build:gradle:8.1.4")
+        classpath("com.android.tools.build:gradle:8.7.3")
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:$kotlin_version")
     }
 }
@@ -28,18 +25,16 @@ apply plugin: 'com.android.library'
 apply plugin: "kotlin-android"
 
 android {
-    if (project.android.hasProperty("namespace")) {
-        namespace = "com.pie.technology.ar.location.view.ar_location_view"
-    }
+    namespace = "com.pie.technology.ar.location.view.ar_location_view"
     compileSdk 34
 
     compileOptions {
-        sourceCompatibility JavaVersion.VERSION_1_8
-        targetCompatibility JavaVersion.VERSION_1_8
+        sourceCompatibility JavaVersion.VERSION_17
+        targetCompatibility JavaVersion.VERSION_17
     }
 
     kotlinOptions {
-        jvmTarget = JavaVersion.VERSION_1_8
+        jvmTarget = '17'
     }
 
     sourceSets {
@@ -48,6 +43,6 @@ android {
     }
 
     defaultConfig {
-        minSdkVersion 21
+        minSdk 21
     }
 }

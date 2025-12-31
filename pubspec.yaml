@@ -4,24 +4,25 @@ version: 2.0.16
 homepage: 'https://github.com/Melo567/ar_location_view.git'
 
 environment:
-  sdk: '>=2.18.2 <4.0.0'
-  flutter: ">=2.5.0"
+  sdk: '>=3.0.0 <4.0.0'
+  flutter: ">=3.10.0"
 
 dependencies:
   flutter:
     sdk: flutter
   plugin_platform_interface: ^2.1.8
-  sensors_plus: ^6.1.0
+  sensors_plus: ^7.0.0
   camera: ^0.11.0+1
-  permission_handler: ^11.3.1
+  permission_handler: ^12.0.1
   vector_math: ^2.1.4
-  geolocator: ^13.0.1
+  geolocator: ^14.0.2
   native_device_orientation: ^2.0.3
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
+  pigeon: ^26.1.5
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
