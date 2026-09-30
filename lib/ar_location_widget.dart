@@ -18,6 +18,7 @@ class ArLocationWidget extends StatefulWidget {
     this.accessory,
     this.minDistanceReload = 50,
     this.scaleWithDistance = true,
+    this.minScale = AnnotationLayoutConfig.defaultMinScale,
     this.markerColor,
     this.backgroundRadar,
     this.radarPosition,
@@ -26,6 +27,12 @@ class ArLocationWidget extends StatefulWidget {
     this.isLoading = false,
     this.loadingWidget,
     this.sensorSource,
+    this.sensorErrorBuilder,
+    this.cameraFieldOfView,
+    this.useAltitude = false,
+    this.hideWithinLocationAccuracy = false,
+    this.maxRows,
+    this.groupBadgeBuilder,
   });
 
   ///List of POIs
@@ -67,6 +74,10 @@ class ArLocationWidget extends StatefulWidget {
   ///Scale annotation view with distance from user
   final bool scaleWithDistance;
 
+  ///Scale of a label at [maxVisibleDistance] when [scaleWithDistance]: labels
+  ///shrink linearly from 1 next to the user down to this value.
+  final double minScale;
+
   /// marker color in radar
   final Color? markerColor;
 
@@ -90,12 +101,37 @@ class ArLocationWidget extends StatefulWidget {
   ///Defaults to a device-backed [ArSensorManager] instantiated per view.
   final ArSensorSource? sensorSource;
 
+  ///Widget shown when location/sensors are unavailable, forwarded to
+  ///[ArView].
+  final ArSensorErrorBuilder? sensorErrorBuilder;
+
+  ///Field of view of the back camera along its long side, in degrees.
+  ///Read from the device when null.
+  final double? cameraFieldOfView;
+
+  ///Place POIs above/below the horizon from their altitude, see
+  ///[AnnotationLayoutConfig.useAltitude].
+  final bool useAltitude;
+
+  ///Hide POIs closer than the location accuracy, see
+  ///[AnnotationLayoutConfig.hideWithinLocationAccuracy].
+  final bool hideWithinLocationAccuracy;
+
+  ///Maximum number of stacked rows of labels, see
+  ///[AnnotationLayoutConfig.maxRows].
+  final int? maxRows;
+
+  ///Badge shown on a label that has annotations grouped into it, see
+  ///[ArView.groupBadgeBuilder].
+  final AnnotationGroupBadgeBuilder? groupBadgeBuilder;
+
   @override
   State<ArLocationWidget> createState() => _ArLocationWidgetState();
 }
 
 class _ArLocationWidgetState extends State<ArLocationWidget> {
   bool initCam = false;
+  double? previewAspectRatio;
 
   @override
   Widget build(BuildContext context) {
@@ -105,6 +141,9 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
           onCameraError: (String error) {
             initCam = false;
             setState(() {});
+          },
+          onPreviewAspectRatio: (double aspectRatio) {
+            previewAspectRatio = aspectRatio;
           },
           onCameraSuccess: () {
             initCam = true;
@@ -125,12 +164,20 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
             yOffsetOverlap: widget.yOffsetOverlap,
             minDistanceReload: widget.minDistanceReload,
             scaleWithDistance: widget.scaleWithDistance,
+            minScale: widget.minScale,
             markerColor: widget.markerColor,
             backgroundRadar: widget.backgroundRadar,
             radarPosition: widget.radarPosition,
             showRadar: widget.showRadar,
             radarWidth: widget.radarWidth,
             sensorSource: widget.sensorSource,
+            sensorErrorBuilder: widget.sensorErrorBuilder,
+            cameraFieldOfView: widget.cameraFieldOfView,
+            previewAspectRatio: previewAspectRatio,
+            useAltitude: widget.useAltitude,
+            hideWithinLocationAccuracy: widget.hideWithinLocationAccuracy,
+            maxRows: widget.maxRows,
+            groupBadgeBuilder: widget.groupBadgeBuilder,
           ),
         if (initCam && widget.accessory != null) widget.accessory!,
         if (widget.isLoading)

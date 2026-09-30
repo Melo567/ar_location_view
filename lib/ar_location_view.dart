@@ -2,12 +2,17 @@ library ar_location_view;
 
 export 'annotation_layout_engine.dart';
 export 'ar_annotation.dart';
+export 'ar_attitude_filter.dart';
 export 'ar_camera.dart';
+export 'ar_camera_info.dart';
 export 'ar_compass.dart';
 export 'ar_extension.dart';
+export 'ar_location_filter.dart';
 export 'ar_location_widget.dart';
 export 'ar_math.dart';
+export 'ar_projection.dart';
 export 'ar_sensor.dart';
+export 'ar_sensor_exception.dart';
 export 'ar_sensor_manager.dart';
 export 'ar_sensor_source.dart';
 export 'ar_status.dart';

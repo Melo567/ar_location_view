@@ -10,6 +10,7 @@ abstract class ArAnnotation {
     this.isVisible = false,
     this.arPosition = const Offset(0, 0),
     this.arPositionOffset = const Offset(0, 0),
+    this.arScale = 1,
   });
 
   String uid;
@@ -19,6 +20,11 @@ abstract class ArAnnotation {
   bool isVisible;
   Offset arPosition;
   Offset arPositionOffset;
+
+  /// Scale of the label, set by the layout (see
+  /// [AnnotationLayoutConfig.scaleWithDistance]). The label is scaled around
+  /// its center.
+  double arScale;
 
   @override
   String toString() {

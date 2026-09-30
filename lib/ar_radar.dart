@@ -58,9 +58,13 @@ class RadarPainter extends CustomPainter {
         radius: radius,
       ))
       ..style = PaintingStyle.fill;
+    canvas.save();
+    canvas.clipPath(
+        Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
     canvas.drawCircle(center, radius, paint);
     canvas.drawPath(path, paint2);
     drawMarker(canvas, arAnnotations, radius);
+    canvas.restore();
   }
 
   @override
@@ -68,8 +72,10 @@ class RadarPainter extends CustomPainter {
 
   void drawMarker(
       Canvas canvas, List<ArAnnotation> annotations, double radius) {
+    final Paint paint = Paint()..color = markerColor;
     for (final annotation in annotations) {
-      final Paint paint = Paint()..color = markerColor;
+      // Beyond the radar range the marker would be drawn outside the disc.
+      if (annotation.distanceFromUser > maxDistance) continue;
       final distanceInRadar =
           annotation.distanceFromUser / maxDistance * radius;
       final alpha = pi - annotation.azimuth.toRadians;

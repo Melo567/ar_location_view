@@ -1,13 +1,20 @@
 package com.pie.technology.ar.location.view.ar_location_view;
 
 import android.content.Context;
+import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraManager;
 import android.hardware.display.DisplayManager;
+import android.location.Location;
+import android.location.LocationManager;
 import android.os.SystemClock;
 import android.util.Log;
+import android.util.SizeF;
 import android.view.Display;
 import android.view.Surface;
 
@@ -18,6 +25,7 @@ import io.flutter.embedding.engine.plugins.FlutterPlugin;
 import io.flutter.plugin.common.EventChannel;
 import io.flutter.plugin.common.EventChannel.EventSink;
 import io.flutter.plugin.common.EventChannel.StreamHandler;
+import io.flutter.plugin.common.MethodChannel;
 
 
 /**
@@ -53,11 +61,27 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
     private float[] gravityValues = new float[3];
     private float[] magneticValues = new float[3];
 
+    private static final long DECLINATION_REFRESH_MS = 60_000;
+
+    @Nullable
+    private EventChannel channel;
+    @Nullable
+    private MethodChannel cameraChannel;
+    private Context context;
+
+    /**
+     * Magnetic declination at the last known location, added to the magnetic
+     * azimuth so the heading is relative to true north like on iOS.
+     */
+    private float declination;
+    private long declinationNextUpdate;
+
     public ArLocationViewPlugin() {
 
     }
 
-    private ArLocationViewPlugin(Context context) {
+    private void init(Context context) {
+        this.context = context;
         display = ((DisplayManager) context.getSystemService(Context.DISPLAY_SERVICE))
                 .getDisplay(Display.DEFAULT_DISPLAY);
         sensorManager = (SensorManager) context.getSystemService(Context.SENSOR_SERVICE);
@@ -75,33 +99,133 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
 
     @Override
     public void onAttachedToEngine(@NonNull FlutterPluginBinding binding) {
-        EventChannel channel = new EventChannel(binding.getBinaryMessenger(), "pie/ar_view_location");
-        channel.setStreamHandler(new ArLocationViewPlugin(binding.getApplicationContext()));
+        init(binding.getApplicationContext());
+        channel = new EventChannel(binding.getBinaryMessenger(), "pie/ar_view_location");
+        channel.setStreamHandler(this);
+        cameraChannel = new MethodChannel(binding.getBinaryMessenger(), "pie/ar_view_location/camera");
+        cameraChannel.setMethodCallHandler((call, result) -> {
+            if ("backCameraFieldOfView".equals(call.method)) {
+                result.success(backCameraFieldOfView());
+            } else {
+                result.notImplemented();
+            }
+        });
     }
 
     @Override
     public void onDetachedFromEngine(@NonNull FlutterPluginBinding binding) {
+        unregisterSensors();
+        if (channel != null) {
+            channel.setStreamHandler(null);
+            channel = null;
+        }
+        if (cameraChannel != null) {
+            cameraChannel.setMethodCallHandler(null);
+            cameraChannel = null;
+        }
+    }
+
+    /**
+     * Field of view of the first back camera along the sensor's long side, in
+     * degrees, from its physical sensor size and focal length; null if unknown.
+     */
+    @Nullable
+    private Double backCameraFieldOfView() {
+        CameraManager cameraManager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+        if (cameraManager == null) {
+            return null;
+        }
+        try {
+            for (String id : cameraManager.getCameraIdList()) {
+                CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(id);
+                Integer facing = characteristics.get(CameraCharacteristics.LENS_FACING);
+                if (facing == null || facing != CameraCharacteristics.LENS_FACING_BACK) {
+                    continue;
+                }
+                SizeF sensorSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+                float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+                if (sensorSize == null || focalLengths == null || focalLengths.length == 0 || focalLengths[0] <= 0) {
+                    return null;
+                }
+                double longSide = Math.max(sensorSize.getWidth(), sensorSize.getHeight());
+                return Math.toDegrees(2 * Math.atan(longSide / (2 * focalLengths[0])));
+            }
+        } catch (CameraAccessException | IllegalArgumentException e) {
+            Log.w(TAG, "Unable to read the back camera characteristics", e);
+        }
+        return null;
     }
 
     public void onListen(Object arguments, EventSink events) {
+        // A new listen without a cancel (e.g. hot restart) must not leave the
+        // previous listener registered and emitting to a dead sink.
+        unregisterSensors();
         sensorEventListener = createSensorEventListener(events);
+        lastAccuracySensorStatus = SensorManager.SENSOR_STATUS_NO_CONTACT;
+        declinationNextUpdate = 0;
 
         if (isCompassSensorAvailable()) {
-            // Does nothing if the sensors already registered.
             sensorManager.registerListener(sensorEventListener, compassSensor, SensorManager.SENSOR_DELAY_GAME);
+        } else {
+            // Only needed for the fallback: keeping them on alongside the
+            // rotation vector would just drain the battery.
+            sensorManager.registerListener(sensorEventListener, gravitySensor, SensorManager.SENSOR_DELAY_GAME);
+            sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_GAME);
         }
-
-        sensorManager.registerListener(sensorEventListener, gravitySensor, SensorManager.SENSOR_DELAY_GAME);
-        sensorManager.registerListener(sensorEventListener, magneticFieldSensor, SensorManager.SENSOR_DELAY_GAME);
     }
 
     public void onCancel(Object arguments) {
-        if (isCompassSensorAvailable()) {
-            sensorManager.unregisterListener(sensorEventListener, compassSensor);
-        }
+        unregisterSensors();
+    }
 
-        sensorManager.unregisterListener(sensorEventListener, gravitySensor);
-        sensorManager.unregisterListener(sensorEventListener, magneticFieldSensor);
+    private void unregisterSensors() {
+        if (sensorEventListener != null && sensorManager != null) {
+            sensorManager.unregisterListener(sensorEventListener);
+            sensorEventListener = null;
+        }
+    }
+
+    /**
+     * Refreshes {@link #declination} from the last known location, at most once
+     * per {@link #DECLINATION_REFRESH_MS}. The declination barely changes over
+     * a few kilometers, so a coarse/stale location is good enough.
+     */
+    private void updateDeclinationIfNeeded(long now) {
+        if (now < declinationNextUpdate) {
+            return;
+        }
+        declinationNextUpdate = now + DECLINATION_REFRESH_MS;
+        Location location = lastKnownLocation();
+        if (location == null) {
+            // Retry sooner: the location usually becomes available shortly.
+            declinationNextUpdate = now + 5_000;
+            return;
+        }
+        declination = new GeomagneticField(
+                (float) location.getLatitude(),
+                (float) location.getLongitude(),
+                (float) location.getAltitude(),
+                System.currentTimeMillis()).getDeclination();
+    }
+
+    @Nullable
+    private Location lastKnownLocation() {
+        LocationManager locationManager = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        if (locationManager == null) {
+            return null;
+        }
+        Location best = null;
+        for (String provider : locationManager.getProviders(true)) {
+            try {
+                Location location = locationManager.getLastKnownLocation(provider);
+                if (location != null && (best == null || location.getTime() > best.getTime())) {
+                    best = location;
+                }
+            } catch (SecurityException ignored) {
+                // Location permission not granted (yet): stay on magnetic north.
+            }
+        }
+        return best;
     }
 
     private boolean isCompassSensorAvailable() {
@@ -132,7 +256,9 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
 
             @Override
             public void onAccuracyChanged(Sensor sensor, int accuracy) {
-                if (lastAccuracySensorStatus != accuracy) {
+                // The accelerometer's accuracy says nothing about the heading.
+                if (sensor.getType() == Sensor.TYPE_ROTATION_VECTOR
+                        || sensor.getType() == Sensor.TYPE_MAGNETIC_FIELD) {
                     lastAccuracySensorStatus = accuracy;
                 }
             }
@@ -148,8 +274,12 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
                 if (rotationVectorValue != null) {
                     SensorManager.getRotationMatrixFromVector(rotationMatrix, rotationVectorValue);
                 } else {
-                    // Get rotation matrix given the gravity and geomagnetic matrices
-                    SensorManager.getRotationMatrix(rotationMatrix, null, gravityValues, magneticValues);
+                    // Get rotation matrix given the gravity and geomagnetic matrices.
+                    // It fails until both sensors produced a sample (or in free
+                    // fall): emitting then would send an all-zero attitude.
+                    if (!SensorManager.getRotationMatrix(rotationMatrix, null, gravityValues, magneticValues)) {
+                        return;
+                    }
                 }
 
                 int worldAxisForDeviceAxisX;
@@ -180,6 +310,10 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
                 float[] adjustedRotationMatrix = new float[9];
                 SensorManager.remapCoordinateSystem(rotationMatrix, worldAxisForDeviceAxisX, worldAxisForDeviceAxisY,
                         adjustedRotationMatrix);
+                // Screen frame -> magnetic world, before the pitch-dependent
+                // remapping below (which is only meant for the legacy heading and
+                // introduces a jump at ±45°).
+                float[] screenToWorld = adjustedRotationMatrix.clone();
 
                 // Transform rotation matrix into azimuth/pitch/roll
                 float[] orientation = new float[3];
@@ -259,14 +393,51 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
                 // Transform rotation matrix into azimuth/pitch/roll
                 SensorManager.getOrientation(adjustedRotationMatrix, orientation);
 
-                double[] v = new double[3];
-                v[0] = Math.toDegrees(orientation[0]);
+                updateDeclinationIfNeeded(currentTime);
+                double heading = (Math.toDegrees(orientation[0]) + declination + 360.0) % 360.0;
+
+                // Same layout and units as iOS: [heading, headingForCameraMode,
+                // accuracy in degrees]. The axes are already remapped for the
+                // back camera when the device is upright, so both headings match.
+                double[] worldToScreen = worldToScreen(screenToWorld, declination);
+                double[] v = new double[12];
+                v[0] = heading;
+                v[1] = heading;
                 v[2] = getAccuracy();
-                // The x-axis is all we care about here.
+                System.arraycopy(worldToScreen, 0, v, 3, 9);
                 notifyCompassChangeListeners(v);
 
                 // Update the compassUpdateNextTimestamp
                 compassUpdateNextTimestamp = currentTime + COMPASS_UPDATE_RATE_MS;
+            }
+
+            /**
+             * Converts a screen -> magnetic ENU matrix into the row-major true
+             * ENU -> screen matrix expected by the Dart side
+             * ({@code ArSensor.rotationMatrix}).
+             */
+            private double[] worldToScreen(float[] screenToMagnetic, float declinationDegrees) {
+                // Magnetic -> true world is a rotation around Up by the
+                // declination (east positive).
+                double d = Math.toRadians(declinationDegrees);
+                double cos = Math.cos(d);
+                double sin = Math.sin(d);
+                double[] screenToTrue = new double[9];
+                for (int col = 0; col < 3; col++) {
+                    double east = screenToMagnetic[col];
+                    double north = screenToMagnetic[3 + col];
+                    screenToTrue[col] = cos * east + sin * north;
+                    screenToTrue[3 + col] = -sin * east + cos * north;
+                    screenToTrue[6 + col] = screenToMagnetic[6 + col];
+                }
+                // Rotation matrices are orthonormal: the inverse is the transpose.
+                double[] result = new double[9];
+                for (int row = 0; row < 3; row++) {
+                    for (int col = 0; col < 3; col++) {
+                        result[row * 3 + col] = screenToTrue[col * 3 + row];
+                    }
+                }
+                return result;
             }
 
             private void notifyCompassChangeListeners(double[] heading) {
@@ -274,8 +445,22 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
                 lastHeading = (float) heading[0];
             }
 
+            /**
+             * Android only reports a coarse accuracy status: map it to an
+             * approximate error in degrees (-1 = unknown/unreliable), matching
+             * the unit of iOS {@code CLHeading.headingAccuracy}.
+             */
             private double getAccuracy() {
-                return lastAccuracySensorStatus;
+                switch (lastAccuracySensorStatus) {
+                    case SensorManager.SENSOR_STATUS_ACCURACY_HIGH:
+                        return 15;
+                    case SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM:
+                        return 30;
+                    case SensorManager.SENSOR_STATUS_ACCURACY_LOW:
+                        return 45;
+                    default:
+                        return -1;
+                }
             }
 
             /**

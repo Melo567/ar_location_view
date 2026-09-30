@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:math';
 
 import 'package:geolocator/geolocator.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
@@ -8,11 +7,32 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 import 'ar_location_view.dart';
+import 'ar_low_pass_filter.dart';
 
 class ArSensorManager implements ArSensorSource {
+  /// Pass a null filter to use the raw sensor values.
+  ArSensorManager({
+    AttitudeFilter? attitudeFilter,
+    HeadingFilter? headingFilter,
+    LocationFilter? locationFilter,
+    bool smoothAttitude = true,
+    bool smoothLocation = true,
+  })  : _attitudeFilter =
+            smoothAttitude ? (attitudeFilter ?? AttitudeFilter()) : null,
+        _headingFilter =
+            smoothAttitude ? (headingFilter ?? HeadingFilter()) : null,
+        _locationFilter =
+            smoothLocation ? (locationFilter ?? LocationFilter()) : null;
+
+  final AttitudeFilter? _attitudeFilter;
+  final HeadingFilter? _headingFilter;
+  final LocationFilter? _locationFilter;
+
+  /// Monotonic clock for the time-based filters.
+  final Stopwatch _clock = Stopwatch()..start();
+
   StreamSubscription<AccelerometerEvent>? _accelerationStream;
   StreamSubscription<CompassEvent>? _headingStream;
-  StreamSubscription<UserAccelerometerEvent>? _userAccelerationStream;
   StreamSubscription<Position>? _positionSubscription;
   final NativeDeviceOrientationCommunicator _deviceOrientationCommunicator =
       NativeDeviceOrientationCommunicator();
@@ -20,48 +40,58 @@ class ArSensorManager implements ArSensorSource {
   StreamSubscription<NativeDeviceOrientation>? _orientationStreamSubscription;
   NativeDeviceOrientation _orientation = NativeDeviceOrientation.portraitUp;
 
-  Vector3 _accelerometer = Vector3.zero();
-  Vector3 _userAccelerometer = Vector3.zero();
-
   Position? _position;
 
   double _heading = 0.0;
-  double _compassAccuracy = 0.0;
+  double _compassAccuracy = -1;
+  double _pitch = 0.0;
+  List<double>? _rotationMatrix;
 
-  late StreamController<ArSensor> _arSensorController;
+  /// Broadcast so a single manager can feed several [ArView]s.
+  final StreamController<ArSensor> _arSensorController =
+      StreamController.broadcast();
 
-  List<double> pitchHistory = [];
+  /// Fallback pitch source, only used until the platform provides a full
+  /// rotation matrix (see [_onCompass]). Applied once per accelerometer
+  /// sample (50 Hz, see [_initialisation]): alpha 0.04 gives a time constant
+  /// of ~0.5 s, which also filters out the user's own acceleration so the
+  /// raw accelerometer approximates gravity.
+  final LowPassFilter _pitchFilter = LowPassFilter(alpha: 0.04);
 
+  bool _initialized = false;
+  bool _disposed = false;
+
+  /// Idempotent: calling it again (e.g. from several views sharing this
+  /// manager) does not re-subscribe to the sensors.
   @override
   void init() {
-    _arSensorController = StreamController();
+    if (_initialized || _disposed) return;
+    _initialized = true;
     _checkLocationPermission();
   }
 
   void _initialisation() {
-    _accelerationStream =
-        accelerometerEventStream().listen((AccelerometerEvent event) {
-      _accelerometer = Vector3(event.x, event.y, event.z);
-      _calculateSensor();
+    // The default sampling period (200 ms) makes the pitch visibly jerky.
+    _accelerationStream = accelerometerEventStream(
+      samplingPeriod: SensorInterval.gameInterval,
+    ).listen((AccelerometerEvent event) {
+      _updatePitch(Vector3(event.x, event.y, event.z));
+      _emit();
     });
-    _userAccelerationStream =
-        userAccelerometerEventStream().listen((UserAccelerometerEvent event) {
-      _userAccelerometer = Vector3(event.x, event.y, event.z);
-      _calculateSensor();
-    });
-    _headingStream = ArCompass.events?.listen((CompassEvent event) {
-      if (event.heading != null && event.accuracy != null) {
-        _heading = event.heading!;
-        _compassAccuracy = event.accuracy!;
-        _calculateSensor();
-      }
-    });
+    _headingStream = ArCompass.events?.listen(_onCompass);
 
-    _positionSubscription =
-        Geolocator.getPositionStream().listen((Position position) {
-      _position = position;
-      _calculateSensor();
-    });
+    _positionSubscription = Geolocator.getPositionStream().listen(
+      (Position position) {
+        _position = _locationFilter?.add(position) ?? position;
+        _emit();
+      },
+      onError: (Object error) => _addError(
+        error is LocationServiceDisabledException
+            ? ArSensorErrorType.locationServiceDisabled
+            : ArSensorErrorType.unknown,
+        error,
+      ),
+    );
 
     _orientationStream =
         _deviceOrientationCommunicator.onOrientationChanged(useSensor: true);
@@ -70,68 +100,93 @@ class ArSensorManager implements ArSensorSource {
     });
   }
 
-  void _calculateSensor() {
-    const coef = -0.1;
-    final x = coef * (_accelerometer.x - _userAccelerometer.x);
-    final y = coef * (_accelerometer.y - _userAccelerometer.y);
-    final z = coef * (_accelerometer.z - _userAccelerometer.z);
-    final Vector3 gravity = Vector3(x, y, z);
-    final double pitch = ArMath.calculatePitch(
+  void _onCompass(CompassEvent event) {
+    // A null accuracy means "unknown/uncalibrated", not "no heading":
+    // dropping those events froze the heading until calibration.
+    _compassAccuracy = event.accuracy ?? -1;
+    final rotationMatrix = event.rotationMatrix;
+    if (rotationMatrix != null) {
+      // The attitude carries heading, pitch and roll from the same fused
+      // sample: the accelerometer fallback is no longer needed.
+      final smoothed =
+          _attitudeFilter?.add(rotationMatrix, _now) ?? rotationMatrix;
+      _rotationMatrix = smoothed;
+      _heading = ArRotation.heading(smoothed);
+      _pitch = ArRotation.pitch(smoothed);
+      _accelerationStream?.cancel();
+      _accelerationStream = null;
+    } else {
+      final heading = event.heading;
+      if (heading == null) return;
+      _heading = _headingFilter?.add(heading, _now) ?? heading;
+    }
+    _emit();
+  }
+
+  double get _now => _clock.elapsedMicroseconds / 1e6;
+
+  /// Only accelerometer samples feed the pitch filter, so its smoothing does
+  /// not depend on how often the compass or GPS happen to fire.
+  void _updatePitch(Vector3 acceleration) {
+    // calculatePitch expects the gravity vector pointing down (-g).
+    final gravity = acceleration * -0.1;
+    final pitch = ArMath.calculatePitch(
       gravity: gravity,
       orientation: _orientation,
     );
+    _pitch = _pitchFilter.add(pitch);
+  }
 
-    pitchHistory.add(pitch);
-
-    const serieLength = 100;
-    const alpha = 0.009;
-    if (pitchHistory.length > serieLength) {
-      pitchHistory = pitchHistory.sublist(pitchHistory.length - serieLength);
-    }
-
+  void _emit() {
+    if (_disposed) return;
     final arSensor = ArSensor(
       heading: _heading,
-      pitch: _filterExponential(pitchHistory, alpha),
+      pitch: _pitch,
       location: _position,
       orientation: _orientation,
       compassAccuracy: _compassAccuracy,
+      rotationMatrix: _rotationMatrix,
     );
     _arSensorController.add(arSensor);
+  }
+
+  void _addError(ArSensorErrorType type, [Object? cause]) {
+    if (_disposed) return;
+    _arSensorController.addError(ArSensorException(type, cause: cause));
   }
 
   @override
   Stream<ArSensor> get arSensor => _arSensorController.stream;
 
+  /// The permission prompt can stay open for a long time: [dispose] may run
+  /// meanwhile, so the sensors must not be started once it resolves.
   Future<void> _checkLocationPermission() async {
-    bool isLocationGranted = await Permission.location.isGranted;
-    if (!isLocationGranted) {
-      await Permission.location.request();
-      isLocationGranted = await Permission.location.isGranted;
-      if (isLocationGranted) {
-        _initialisation();
+    try {
+      var status = await Permission.location.status;
+      if (!status.isGranted && !status.isPermanentlyDenied) {
+        status = await Permission.location.request();
       }
-    } else {
-      _initialisation();
+      if (_disposed) return;
+      if (status.isGranted) {
+        _initialisation();
+      } else if (status.isPermanentlyDenied) {
+        _addError(ArSensorErrorType.permissionPermanentlyDenied);
+      } else {
+        _addError(ArSensorErrorType.permissionDenied);
+      }
+    } catch (error) {
+      _addError(ArSensorErrorType.unknown, error);
     }
   }
 
   @override
   void dispose() {
+    if (_disposed) return;
+    _disposed = true;
     _arSensorController.close();
     _accelerationStream?.cancel();
-    _userAccelerationStream?.cancel();
     _positionSubscription?.cancel();
     _orientationStreamSubscription?.cancel();
     _headingStream?.cancel();
-  }
-
-  double _filterExponential(List<double> numbers, double alpha) {
-    final coef = 1 - alpha;
-    final temps = numbers.reversed.toList();
-    double sum = 0.0;
-    for (int i = 0; i < temps.length; i++) {
-      sum += pow(coef, i) * temps[i];
-    }
-    return alpha * sum;
   }
 }
