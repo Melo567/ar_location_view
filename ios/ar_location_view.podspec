@@ -4,7 +4,7 @@
 #
 Pod::Spec.new do |s|
   s.name             = 'ar_location_view'
-  s.version          = '3.1.0'
+  s.version          = '3.2.1'
   s.summary          = 'Location-based augmented reality for Flutter.'
   s.description      = <<-DESC
 Streams the device heading and attitude used by the ar_location_view Flutter

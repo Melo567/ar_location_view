@@ -2,7 +2,7 @@ name: ar_location_view
 description: >-
   Location-based augmented reality: shows labels for geolocated points of
   interest over the camera preview, stacked so that every POI stays visible.
-version: 3.2.0
+version: 3.2.1
 homepage: https://github.com/Melo567/ar_location_view
 repository: https://github.com/Melo567/ar_location_view
 issue_tracker: https://github.com/Melo567/ar_location_view/issues
@@ -33,6 +33,7 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^6.0.0
   permission_handler_platform_interface: ^4.3.0
+  camera_platform_interface: ^2.12.0
 
 flutter:
   plugin:

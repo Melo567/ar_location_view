@@ -1,3 +1,18 @@
+## 3.2.1
+
+**Bug fixes**
+
+* Fix the camera preview being squeezed when the app is locked in one orientation while the device is held in the other (e.g. locked in portrait, held in landscape): `CameraPreview` shapes itself after the physical orientation of the device, while the image stays upright for the UI. The preview is now shaped after the UI and covers the view (`BoxFit.cover`, centered, as the AR projection expects).
+* `ArCamera.onPreviewAspectRatio` always reports long side / short side, whichever way the platform reports the preview size.
+
+## 3.2.0
+
+**Breaking changes** (custom `ArSensorSource` implementations and code reading `ArSensor.orientation`)
+
+* Remove the `native_device_orientation` dependency: the orientation is now computed by the plugin's native side and sent with the compass events (`CompassEvent.orientation`). `ArSensor.orientation` and `ArMath.calculatePitch` use Flutter's `DeviceOrientation` (`package:flutter/services.dart`) instead of `NativeDeviceOrientation`: replace `NativeDeviceOrientation.x` by `DeviceOrientation.x`.
+* `ArSensor.orientation` is now the orientation of the **UI**, which `ArSensor.rotationMatrix` is relative to, instead of the physical orientation of the device: it stays `portraitUp` when the app is locked in portrait.
+* Remove `ArSensorBackend.orientation`.
+
 ## 3.1.0
 
 **Performance & battery**

@@ -125,17 +125,32 @@ class _ArCameraViewState extends State<ArCamera> with WidgetsBindingObserver {
     }
   }
 
+  /// Covers the available space with the preview (like [BoxFit.cover]),
+  /// cropped around its center as [ArView] expects.
+  ///
+  /// [CameraPreview] alone shapes itself after the *physical* orientation of
+  /// the device, while the platform keeps the image upright for the *UI*:
+  /// with the app locked in portrait and the device held in landscape, the
+  /// image was squeezed into a landscape box. It is given a box shaped after
+  /// the UI instead, which its `AspectRatio` follows under tight constraints.
   Widget _preview(CameraController controller) {
+    final previewSize = controller.value.previewSize!;
+    final long = previewSize.longestSide;
+    final short = previewSize.shortestSide;
     return LayoutBuilder(
       builder: (context, constraints) {
         final size = constraints.biggest;
+        final portrait = size.height >= size.width;
         return SizedBox(
           width: size.width,
           height: size.height,
-          child: ClipRect(
-            child: Transform.scale(
-              scale: _coverScale(size, controller.value.aspectRatio),
-              child: Center(child: CameraPreview(controller)),
+          child: FittedBox(
+            fit: BoxFit.cover,
+            clipBehavior: Clip.hardEdge,
+            child: SizedBox(
+              width: portrait ? short : long,
+              height: portrait ? long : short,
+              child: CameraPreview(controller),
             ),
           ),
         );
@@ -154,17 +169,6 @@ class _ArCameraViewState extends State<ArCamera> with WidgetsBindingObserver {
         ? 'Camera permission denied'
         : 'Camera unavailable';
     return Center(child: Text(message, textAlign: TextAlign.center));
-  }
-
-  /// Scale that makes the preview cover [size] (like [BoxFit.cover]).
-  /// [CameraPreview] is letterboxed by default; [previewAspectRatio] is the
-  /// sensor's landscape ratio, which [CameraPreview] flips in portrait.
-  double _coverScale(Size size, double previewAspectRatio) {
-    final displayedRatio = size.width > size.height
-        ? previewAspectRatio
-        : 1 / previewAspectRatio;
-    final ratio = size.aspectRatio / displayedRatio;
-    return ratio < 1 ? 1 / ratio : ratio;
   }
 
   Future<void> _initializeCamera() async {
@@ -234,7 +238,11 @@ class _ArCameraViewState extends State<ArCamera> with WidgetsBindingObserver {
       controller = newController;
       _status = _CameraStatus.ready;
     });
-    widget.onPreviewAspectRatio?.call(newController.value.aspectRatio);
+    // Long side / short side, whichever way the platform reports the size.
+    final previewSize = newController.value.previewSize!;
+    widget.onPreviewAspectRatio?.call(
+      previewSize.longestSide / previewSize.shortestSide,
+    );
     widget.onCameraSuccess();
   }
 
