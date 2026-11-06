@@ -139,7 +139,8 @@ class AnnotationLayoutEngine {
       cameraFieldOfView: config.cameraFieldOfView,
       previewAspectRatio: config.previewAspectRatio,
     );
-    final rotation = arSensor.rotationMatrix ??
+    final rotation =
+        arSensor.rotationMatrix ??
         ArRotation.fromHeadingPitch(arSensor.heading, arSensor.pitch);
     final status = _status(projection, arSensor, deviceLocation);
 
@@ -152,10 +153,15 @@ class AnnotationLayoutEngine {
       annotation.arScale = _scale(annotation, config);
       annotation.isVisible =
           annotation.distanceFromUser < config.maxVisibleDistance &&
-              !(config.hideWithinLocationAccuracy &&
-                  annotation.distanceFromUser < deviceLocation.accuracy) &&
-              _place(annotation, deviceLocation.altitude, rotation, projection,
-                  config);
+          !(config.hideWithinLocationAccuracy &&
+              annotation.distanceFromUser < deviceLocation.accuracy) &&
+          _place(
+            annotation,
+            deviceLocation.altitude,
+            rotation,
+            projection,
+            config,
+          );
       if (annotation.isVisible) visible.add(annotation);
     }
 
@@ -171,7 +177,10 @@ class AnnotationLayoutEngine {
   }
 
   ArStatus _status(
-      ArProjection projection, ArSensor arSensor, Position deviceLocation) {
+    ArProjection projection,
+    ArSensor arSensor,
+    Position deviceLocation,
+  ) {
     final hFov = projection.horizontalFieldOfView;
     final vFov = projection.verticalFieldOfView;
     return ArStatus()
@@ -193,16 +202,19 @@ class AnnotationLayoutEngine {
       annotationLocation.longitude,
     );
     annotation.distanceFromUser = Geolocator.distanceBetween(
-        deviceLocation.latitude,
-        deviceLocation.longitude,
-        annotationLocation.latitude,
-        annotationLocation.longitude);
+      deviceLocation.latitude,
+      deviceLocation.longitude,
+      annotationLocation.latitude,
+      annotationLocation.longitude,
+    );
   }
 
   double _scale(ArAnnotation annotation, AnnotationLayoutConfig config) {
     if (!config.scaleWithDistance || config.maxVisibleDistance <= 0) return 1;
-    final t = (annotation.distanceFromUser / config.maxVisibleDistance)
-        .clamp(0.0, 1.0);
+    final t = (annotation.distanceFromUser / config.maxVisibleDistance).clamp(
+      0.0,
+      1.0,
+    );
     return 1 - t * (1 - config.minScale);
   }
 
@@ -210,18 +222,22 @@ class AnnotationLayoutEngine {
   /// Returns false when it is behind the camera or when its label would not
   /// intersect the screen at all.
   bool _place(
-      ArAnnotation annotation,
-      double userAltitude,
-      List<double> rotation,
-      ArProjection projection,
-      AnnotationLayoutConfig config) {
+    ArAnnotation annotation,
+    double userAltitude,
+    List<double> rotation,
+    ArProjection projection,
+    AnnotationLayoutConfig config,
+  ) {
     final elevation = config.useAltitude
-        ? atan2(annotation.position.altitude - userAltitude,
-                max(annotation.distanceFromUser, 1))
-            .toDegrees
+        ? atan2(
+            annotation.position.altitude - userAltitude,
+            max(annotation.distanceFromUser, 1),
+          ).toDegrees
         : 0.0;
     final point = projection.project(
-        rotation, ArProjection.direction(annotation.azimuth, elevation));
+      rotation,
+      ArProjection.direction(annotation.azimuth, elevation),
+    );
     if (point == null) return false;
 
     final left = point.dx - config.annotationWidth / 2;
@@ -258,12 +274,17 @@ class AnnotationLayoutEngine {
   /// grouped into the placed annotation it overlaps whose center is the
   /// closest, and marked as not visible. Since annotations are processed
   /// closest first, the farthest ones are the ones grouped.
-  _OverlapResult _transformAnnotation(List<ArAnnotation> annotations,
-      AnnotationLayoutConfig config, Map<String, int> previousRows) {
-    annotations
-        .sort((a, b) => a.distanceFromUser.compareTo(b.distanceFromUser));
+  _OverlapResult _transformAnnotation(
+    List<ArAnnotation> annotations,
+    AnnotationLayoutConfig config,
+    Map<String, int> previousRows,
+  ) {
+    annotations.sort(
+      (a, b) => a.distanceFromUser.compareTo(b.distanceFromUser),
+    );
 
-    final step = (config.yOffsetOverlap ?? config.annotationHeight) +
+    final step =
+        (config.yOffsetOverlap ?? config.annotationHeight) +
         config.paddingOverlap;
     final rows = <_Row>[];
     final assigned = <String, int>{};
@@ -271,7 +292,8 @@ class AnnotationLayoutEngine {
     final placed = <_Placed>[];
 
     for (final annotation in annotations) {
-      final halfWidth = config.annotationWidth * annotation.arScale / 2 +
+      final halfWidth =
+          config.annotationWidth * annotation.arScale / 2 +
           config.horizontalSpacing / 2;
       final center = annotation.arPosition.dx + config.annotationWidth / 2;
       final start = center - halfWidth;
@@ -316,8 +338,14 @@ class AnnotationLayoutEngine {
   }
 
   /// Returns null when no row up to [maxRow] can hold the label.
-  int? _chooseRow(List<_Row> rows, double start, double end, int? previousRow,
-      double hysteresis, int maxRow) {
+  int? _chooseRow(
+    List<_Row> rows,
+    double start,
+    double end,
+    int? previousRow,
+    double hysteresis,
+    int maxRow,
+  ) {
     bool fits(int index, double margin) =>
         index >= rows.length ||
         !rows[index].overlaps(start - margin, end + margin);
@@ -335,7 +363,10 @@ class AnnotationLayoutEngine {
   }
 
   ArAnnotation? _closestOverlapping(
-      List<_Placed> placed, double start, double end) {
+    List<_Placed> placed,
+    double start,
+    double end,
+  ) {
     final center = (start + end) / 2;
     ArAnnotation? closest;
     var closestDistance = double.infinity;

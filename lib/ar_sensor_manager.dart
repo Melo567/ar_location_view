@@ -9,20 +9,83 @@ import 'package:vector_math/vector_math_64.dart';
 import 'ar_location_view.dart';
 import 'ar_low_pass_filter.dart';
 
+/// Platform streams and permission calls used by [ArSensorManager].
+///
+/// The defaults talk to the device. Replace them, e.g. with
+/// [StreamController]s, to test code using [ArSensorManager] without
+/// hardware.
+class ArSensorBackend {
+  const ArSensorBackend({
+    this.accelerometer = _accelerometer,
+    this.compass = _compass,
+    this.position = Geolocator.getPositionStream,
+    this.orientation = _orientation,
+    this.locationPermissionStatus = _locationPermissionStatus,
+    this.requestLocationPermission = _requestLocationPermission,
+  });
+
+  /// Raw accelerometer samples, only used for the pitch until the compass
+  /// provides a full rotation matrix.
+  final Stream<AccelerometerEvent> Function() accelerometer;
+
+  /// Heading and attitude from the plugin's native side, null when
+  /// unavailable.
+  final Stream<CompassEvent>? Function() compass;
+
+  final Stream<Position> Function({LocationSettings? locationSettings})
+  position;
+
+  final Stream<NativeDeviceOrientation> Function() orientation;
+
+  final Future<PermissionStatus> Function() locationPermissionStatus;
+
+  /// Prompts the user for the location permission.
+  final Future<PermissionStatus> Function() requestLocationPermission;
+
+  // The default sampling period (200 ms) makes the pitch visibly jerky.
+  static Stream<AccelerometerEvent> _accelerometer() =>
+      accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval);
+
+  static Stream<CompassEvent>? _compass() => ArCompass.events;
+
+  static Stream<NativeDeviceOrientation> _orientation() =>
+      NativeDeviceOrientationCommunicator().onOrientationChanged(
+        useSensor: true,
+      );
+
+  static Future<PermissionStatus> _locationPermissionStatus() =>
+      Permission.location.status;
+
+  static Future<PermissionStatus> _requestLocationPermission() =>
+      Permission.location.request();
+}
+
 class ArSensorManager implements ArSensorSource {
   /// Pass a null filter to use the raw sensor values.
+  ///
+  /// [locationSettings] configures the position stream (accuracy, distance
+  /// filter...), see [Geolocator.getPositionStream].
   ArSensorManager({
     AttitudeFilter? attitudeFilter,
     HeadingFilter? headingFilter,
     LocationFilter? locationFilter,
     bool smoothAttitude = true,
     bool smoothLocation = true,
-  })  : _attitudeFilter =
-            smoothAttitude ? (attitudeFilter ?? AttitudeFilter()) : null,
-        _headingFilter =
-            smoothAttitude ? (headingFilter ?? HeadingFilter()) : null,
-        _locationFilter =
-            smoothLocation ? (locationFilter ?? LocationFilter()) : null;
+    this.locationSettings,
+    this.backend = const ArSensorBackend(),
+  }) : _attitudeFilter = smoothAttitude
+           ? (attitudeFilter ?? AttitudeFilter())
+           : null,
+       _headingFilter = smoothAttitude
+           ? (headingFilter ?? HeadingFilter())
+           : null,
+       _locationFilter = smoothLocation
+           ? (locationFilter ?? LocationFilter())
+           : null;
+
+  final LocationSettings? locationSettings;
+
+  final ArSensorBackend backend;
 
   final AttitudeFilter? _attitudeFilter;
   final HeadingFilter? _headingFilter;
@@ -34,9 +97,6 @@ class ArSensorManager implements ArSensorSource {
   StreamSubscription<AccelerometerEvent>? _accelerationStream;
   StreamSubscription<CompassEvent>? _headingStream;
   StreamSubscription<Position>? _positionSubscription;
-  final NativeDeviceOrientationCommunicator _deviceOrientationCommunicator =
-      NativeDeviceOrientationCommunicator();
-  Stream<NativeDeviceOrientation>? _orientationStream;
   StreamSubscription<NativeDeviceOrientation>? _orientationStreamSubscription;
   NativeDeviceOrientation _orientation = NativeDeviceOrientation.portraitUp;
 
@@ -53,13 +113,16 @@ class ArSensorManager implements ArSensorSource {
 
   /// Fallback pitch source, only used until the platform provides a full
   /// rotation matrix (see [_onCompass]). Applied once per accelerometer
-  /// sample (50 Hz, see [_initialisation]): alpha 0.04 gives a time constant
-  /// of ~0.5 s, which also filters out the user's own acceleration so the
-  /// raw accelerometer approximates gravity.
+  /// sample (50 Hz, see [ArSensorBackend.accelerometer]): alpha 0.04 gives
+  /// a time constant of ~0.5 s, which also filters out the user's own
+  /// acceleration so the raw accelerometer approximates gravity.
   final LowPassFilter _pitchFilter = LowPassFilter(alpha: 0.04);
 
   bool _initialized = false;
   bool _disposed = false;
+  bool _paused = false;
+  bool _permissionGranted = false;
+  bool _checkingPermission = false;
 
   /// Idempotent: calling it again (e.g. from several views sharing this
   /// manager) does not re-subscribe to the sensors.
@@ -67,37 +130,78 @@ class ArSensorManager implements ArSensorSource {
   void init() {
     if (_initialized || _disposed) return;
     _initialized = true;
-    _checkLocationPermission();
+    _checkLocationPermission(request: true);
   }
 
-  void _initialisation() {
-    // The default sampling period (200 ms) makes the pitch visibly jerky.
-    _accelerationStream = accelerometerEventStream(
-      samplingPeriod: SensorInterval.gameInterval,
-    ).listen((AccelerometerEvent event) {
+  /// Stops the sensors and the location updates, e.g. while the app is in
+  /// background, without closing [arSensor]. [ArView] does it for the
+  /// manager it creates; call it yourself on a manager you provide.
+  void pause() {
+    if (_paused || _disposed) return;
+    _paused = true;
+    _stopSensors();
+  }
+
+  /// Restarts what [pause] stopped. When the location permission was
+  /// denied, checks it again (without prompting): the user may have
+  /// granted it from the system settings meanwhile.
+  void resume() {
+    if (!_paused || _disposed) return;
+    _paused = false;
+    if (_permissionGranted) {
+      // Samples from before the pause would be blended with the new ones.
+      _resetFilters();
+      _startSensors();
+    } else if (_initialized && !_checkingPermission) {
+      _checkLocationPermission(request: false);
+    }
+  }
+
+  void _startSensors() {
+    _accelerationStream = backend.accelerometer().listen((
+      AccelerometerEvent event,
+    ) {
       _updatePitch(Vector3(event.x, event.y, event.z));
       _emit();
     });
-    _headingStream = ArCompass.events?.listen(_onCompass);
+    _headingStream = backend.compass()?.listen(_onCompass);
 
-    _positionSubscription = Geolocator.getPositionStream().listen(
-      (Position position) {
-        _position = _locationFilter?.add(position) ?? position;
-        _emit();
-      },
-      onError: (Object error) => _addError(
-        error is LocationServiceDisabledException
-            ? ArSensorErrorType.locationServiceDisabled
-            : ArSensorErrorType.unknown,
-        error,
-      ),
-    );
+    _positionSubscription = backend
+        .position(locationSettings: locationSettings)
+        .listen(
+          (Position position) {
+            _position = _locationFilter?.add(position) ?? position;
+            _emit();
+          },
+          onError: (Object error) => _addError(
+            error is LocationServiceDisabledException
+                ? ArSensorErrorType.locationServiceDisabled
+                : ArSensorErrorType.unknown,
+            error,
+          ),
+        );
 
-    _orientationStream =
-        _deviceOrientationCommunicator.onOrientationChanged(useSensor: true);
-    _orientationStreamSubscription = _orientationStream?.listen((event) {
+    _orientationStreamSubscription = backend.orientation().listen((event) {
       _orientation = event;
     });
+  }
+
+  void _stopSensors() {
+    _accelerationStream?.cancel();
+    _accelerationStream = null;
+    _headingStream?.cancel();
+    _headingStream = null;
+    _positionSubscription?.cancel();
+    _positionSubscription = null;
+    _orientationStreamSubscription?.cancel();
+    _orientationStreamSubscription = null;
+  }
+
+  void _resetFilters() {
+    _attitudeFilter?.reset();
+    _headingFilter?.reset();
+    _locationFilter?.reset();
+    _pitchFilter.reset();
   }
 
   void _onCompass(CompassEvent event) {
@@ -158,24 +262,32 @@ class ArSensorManager implements ArSensorSource {
   @override
   Stream<ArSensor> get arSensor => _arSensorController.stream;
 
-  /// The permission prompt can stay open for a long time: [dispose] may run
-  /// meanwhile, so the sensors must not be started once it resolves.
-  Future<void> _checkLocationPermission() async {
+  /// The permission prompt can stay open for a long time: [dispose] or
+  /// [pause] may run meanwhile, so the sensors must not be started once it
+  /// resolves. Without [request], only checks the permission and reports
+  /// nothing when it is still missing.
+  Future<void> _checkLocationPermission({required bool request}) async {
+    _checkingPermission = true;
     try {
-      var status = await Permission.location.status;
-      if (!status.isGranted && !status.isPermanentlyDenied) {
-        status = await Permission.location.request();
+      var status = await backend.locationPermissionStatus();
+      if (request && !status.isGranted && !status.isPermanentlyDenied) {
+        status = await backend.requestLocationPermission();
       }
       if (_disposed) return;
       if (status.isGranted) {
-        _initialisation();
+        _permissionGranted = true;
+        if (!_paused) _startSensors();
+      } else if (!request) {
+        return;
       } else if (status.isPermanentlyDenied) {
         _addError(ArSensorErrorType.permissionPermanentlyDenied);
       } else {
         _addError(ArSensorErrorType.permissionDenied);
       }
     } catch (error) {
-      _addError(ArSensorErrorType.unknown, error);
+      if (request) _addError(ArSensorErrorType.unknown, error);
+    } finally {
+      _checkingPermission = false;
     }
   }
 
@@ -184,9 +296,6 @@ class ArSensorManager implements ArSensorSource {
     if (_disposed) return;
     _disposed = true;
     _arSensorController.close();
-    _accelerationStream?.cancel();
-    _positionSubscription?.cancel();
-    _orientationStreamSubscription?.cancel();
-    _headingStream?.cancel();
+    _stopSensors();
   }
 }

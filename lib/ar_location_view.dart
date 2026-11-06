@@ -1,4 +1,4 @@
-library ar_location_view;
+library;
 
 export 'annotation_layout_engine.dart';
 export 'ar_annotation.dart';

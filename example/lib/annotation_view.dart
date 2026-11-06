@@ -3,10 +3,7 @@ import 'package:flutter/material.dart';
 import 'annotations.dart';
 
 class AnnotationView extends StatelessWidget {
-  const AnnotationView({
-    Key? key,
-    required this.annotation,
-  }) : super(key: key);
+  const AnnotationView({super.key, required this.annotation});
 
   final Annotation annotation;
 
@@ -43,13 +40,11 @@ class AnnotationView extends StatelessWidget {
                     maxLines: 1,
                     style: const TextStyle(fontWeight: FontWeight.bold),
                   ),
-                  Text(
-                    '${annotation.distanceFromUser.toInt()} m',
-                  ),
+                  Text('${annotation.distanceFromUser.toInt()} m'),
                 ],
               ),
             ),
-          )
+          ),
         ],
       ),
     );
@@ -72,10 +67,6 @@ class AnnotationView extends StatelessWidget {
         color = Colors.blue;
         break;
     }
-    return Icon(
-      iconData,
-      size: 40,
-      color: color,
-    );
+    return Icon(iconData, size: 40, color: color);
   }
 }

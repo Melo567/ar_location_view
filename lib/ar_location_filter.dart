@@ -31,8 +31,11 @@ class LocationFilter {
       return _estimate = fix;
     }
 
-    final gain =
-        _horizontal.update(horizontalAccuracy, fix.timestamp, processNoise);
+    final gain = _horizontal.update(
+      horizontalAccuracy,
+      fix.timestamp,
+      processNoise,
+    );
     // A zero altitude accuracy means "unknown": keep the altitude estimate.
     final altitudeGain = fix.altitudeAccuracy > 0
         ? _altitude.update(fix.altitudeAccuracy, fix.timestamp, processNoise)

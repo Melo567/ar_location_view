@@ -5,7 +5,7 @@
 /// is returned as-is instead of starting from 0.
 class LowPassFilter {
   LowPassFilter({required this.alpha})
-      : assert(alpha > 0 && alpha <= 1, 'alpha must be in (0, 1]');
+    : assert(alpha > 0 && alpha <= 1, 'alpha must be in (0, 1]');
 
   /// Weight given to each new sample. Smaller means smoother but laggier.
   final double alpha;
@@ -16,8 +16,9 @@ class LowPassFilter {
 
   double add(double sample) {
     final previous = _value;
-    return _value =
-        previous == null ? sample : previous + alpha * (sample - previous);
+    return _value = previous == null
+        ? sample
+        : previous + alpha * (sample - previous);
   }
 
   void reset() => _value = null;

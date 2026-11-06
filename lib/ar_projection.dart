@@ -44,10 +44,10 @@ class ArRotation {
   }
 
   static List<double> multiplyVector(List<double> m, List<double> v) => [
-        m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
-        m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
-        m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
-      ];
+    m[0] * v[0] + m[1] * v[1] + m[2] * v[2],
+    m[3] * v[0] + m[4] * v[1] + m[5] * v[2],
+    m[6] * v[0] + m[7] * v[1] + m[8] * v[2],
+  ];
 }
 
 /// Pinhole model of the camera preview as displayed on screen.
@@ -61,8 +61,12 @@ class ArProjection {
     required this.height,
     required double cameraFieldOfView,
     required double previewAspectRatio,
-  }) : focalLength =
-            _focalLength(width, height, cameraFieldOfView, previewAspectRatio);
+  }) : focalLength = _focalLength(
+         width,
+         height,
+         cameraFieldOfView,
+         previewAspectRatio,
+       );
 
   final double width;
   final double height;
@@ -78,8 +82,12 @@ class ArProjection {
 
   /// [cameraFieldOfView] is along the sensor's long side, which is shown
   /// along the screen's long side; [previewAspectRatio] is long/short.
-  static double _focalLength(double width, double height,
-      double cameraFieldOfView, double previewAspectRatio) {
+  static double _focalLength(
+    double width,
+    double height,
+    double cameraFieldOfView,
+    double previewAspectRatio,
+  ) {
     final longSide = max(width, height);
     final shortSide = min(width, height);
     final tanLong = tan((cameraFieldOfView / 2).toRadians);

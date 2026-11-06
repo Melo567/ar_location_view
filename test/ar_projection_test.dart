@@ -7,7 +7,7 @@ import 'package:native_device_orientation/native_device_orientation.dart';
 
 class _TestAnnotation extends ArAnnotation {
   _TestAnnotation(String uid, Position position)
-      : super(uid: uid, position: position);
+    : super(uid: uid, position: position);
 }
 
 /// ~111 km per degree of latitude; longitude at the equator is the same.
@@ -17,19 +17,18 @@ Position _position({
   double northMeters = 0,
   double eastMeters = 0,
   double altitude = 0,
-}) =>
-    Position(
-      latitude: northMeters / _metersPerDegree,
-      longitude: eastMeters / _metersPerDegree,
-      timestamp: DateTime(2024),
-      accuracy: 1,
-      altitude: altitude,
-      heading: 0,
-      speed: 0,
-      speedAccuracy: 0,
-      altitudeAccuracy: 0,
-      headingAccuracy: 0,
-    );
+}) => Position(
+  latitude: northMeters / _metersPerDegree,
+  longitude: eastMeters / _metersPerDegree,
+  timestamp: DateTime(2024),
+  accuracy: 1,
+  altitude: altitude,
+  heading: 0,
+  speed: 0,
+  speedAccuracy: 0,
+  altitudeAccuracy: 0,
+  headingAccuracy: 0,
+);
 
 double _rad(double degrees) => degrees * pi / 180;
 
@@ -76,8 +75,11 @@ void main() {
       );
 
   /// Screen point the POI's label is centered on, or null if not visible.
-  Offset? project(Position poi, ArSensor arSensor,
-      {AnnotationLayoutConfig layoutConfig = config}) {
+  Offset? project(
+    Position poi,
+    ArSensor arSensor, {
+    AnnotationLayoutConfig layoutConfig = config,
+  }) {
     final result = engine.layout(
       annotations: [_TestAnnotation('poi', poi)],
       arSensor: arSensor,
@@ -89,8 +91,10 @@ void main() {
     if (result.annotations.isEmpty) return null;
     final a = result.annotations.single;
     return a.arPosition +
-        Offset(layoutConfig.annotationWidth / 2,
-            layoutConfig.annotationHeight / 2);
+        Offset(
+          layoutConfig.annotationWidth / 2,
+          layoutConfig.annotationHeight / 2,
+        );
   }
 
   group('ArRotation', () {
@@ -117,10 +121,11 @@ void main() {
   group('ArProjection', () {
     test('uses the long side FOV when the screen is more elongated', () {
       final projection = ArProjection(
-          width: 400,
-          height: 800,
-          cameraFieldOfView: 58,
-          previewAspectRatio: 4 / 3);
+        width: 400,
+        height: 800,
+        cameraFieldOfView: 58,
+        previewAspectRatio: 4 / 3,
+      );
       expect(projection.focalLength, closeTo(focal, 1e-9));
       expect(projection.verticalFieldOfView, closeTo(58, 1e-9));
     });
@@ -128,10 +133,11 @@ void main() {
     test('crops the long side when the screen is squarer than the preview', () {
       // 4:3 tablet screen, 16:9 preview: the short side must be covered.
       final projection = ArProjection(
-          width: 768,
-          height: 1024,
-          cameraFieldOfView: 60,
-          previewAspectRatio: 16 / 9);
+        width: 768,
+        height: 1024,
+        cameraFieldOfView: 60,
+        previewAspectRatio: 16 / 9,
+      );
       final tanShort = tan(_rad(30)) / (16 / 9);
       expect(projection.focalLength, closeTo(384 / tanShort, 1e-9));
       expect(projection.verticalFieldOfView, lessThan(60));
@@ -148,14 +154,18 @@ void main() {
     test('uses a pinhole (tan) projection horizontally', () {
       // 20° to the right of the heading.
       final poi = _position(
-          northMeters: 100 * cos(_rad(20)), eastMeters: 100 * sin(_rad(20)));
+        northMeters: 100 * cos(_rad(20)),
+        eastMeters: 100 * sin(_rad(20)),
+      );
       final point = project(poi, sensor())!;
       expect(point.dx, closeTo(width / 2 + focal * tan(_rad(20)), 0.5));
     });
 
     test('hides POIs behind the camera', () {
       expect(
-          project(_position(northMeters: 100), sensor(heading: 180)), isNull);
+        project(_position(northMeters: 100), sensor(heading: 180)),
+        isNull,
+      );
     });
 
     test('moves POIs up when the camera points down', () {
@@ -165,7 +175,9 @@ void main() {
 
     test('follows the device roll', () {
       final poi = _position(
-          northMeters: 100 * cos(_rad(10)), eastMeters: 100 * sin(_rad(10)));
+        northMeters: 100 * cos(_rad(10)),
+        eastMeters: 100 * sin(_rad(10)),
+      );
       final upright = ArRotation.fromHeadingPitch(0, 0);
       final flat = project(poi, sensor(m: upright))!;
       final rolled = project(poi, sensor(m: _withRoll(upright, 90)))!;
@@ -177,7 +189,9 @@ void main() {
       // now straight above/below the center, at the same distance from it.
       expect(rolled.dx, closeTo(width / 2, 1e-6));
       expect(
-          (rolled.dy - height / 2).abs(), closeTo(flat.dx - width / 2, 1e-6));
+        (rolled.dy - height / 2).abs(),
+        closeTo(flat.dx - width / 2, 1e-6),
+      );
     });
 
     test('ignores altitude unless useAltitude is enabled', () {
@@ -193,8 +207,12 @@ void main() {
       );
       // 10 m higher at ~100 m: ~5.7° above the horizon.
       final point = project(hill, sensor(), layoutConfig: withAltitude)!;
-      final distance =
-          Geolocator.distanceBetween(0, 0, hill.latitude, hill.longitude);
+      final distance = Geolocator.distanceBetween(
+        0,
+        0,
+        hill.latitude,
+        hill.longitude,
+      );
       final elevation = atan2(10, distance);
       expect(point.dy, closeTo(height / 2 - focal * tan(elevation), 1e-6));
     });
@@ -208,8 +226,10 @@ void main() {
         height: height,
         config: config,
       );
-      expect(result.annotations.single.arPosition,
-          const Offset(width / 2 - 100, height / 2 - 40));
+      expect(
+        result.annotations.single.arPosition,
+        const Offset(width / 2 - 100, height / 2 - 40),
+      );
     });
   });
 }

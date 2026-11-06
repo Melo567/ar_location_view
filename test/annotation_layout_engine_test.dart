@@ -7,21 +7,21 @@ import 'package:native_device_orientation/native_device_orientation.dart';
 
 class _TestAnnotation extends ArAnnotation {
   _TestAnnotation(String uid, Position position)
-      : super(uid: uid, position: position);
+    : super(uid: uid, position: position);
 }
 
 Position _dueNorthOf(Position origin, double latitudeOffset) => Position(
-      latitude: origin.latitude + latitudeOffset,
-      longitude: origin.longitude,
-      timestamp: DateTime(2024),
-      accuracy: 1,
-      altitude: 0,
-      heading: 0,
-      speed: 0,
-      speedAccuracy: 0,
-      altitudeAccuracy: 0,
-      headingAccuracy: 0,
-    );
+  latitude: origin.latitude + latitudeOffset,
+  longitude: origin.longitude,
+  timestamp: DateTime(2024),
+  accuracy: 1,
+  altitude: 0,
+  heading: 0,
+  speed: 0,
+  speedAccuracy: 0,
+  altitudeAccuracy: 0,
+  headingAccuracy: 0,
+);
 
 void main() {
   const engine = AnnotationLayoutEngine();
@@ -48,12 +48,12 @@ void main() {
   );
 
   ArSensor sensorFacingNorth() => ArSensor(
-        heading: 0,
-        pitch: 0,
-        orientation: NativeDeviceOrientation.portraitUp,
-        compassAccuracy: 1,
-        location: device,
-      );
+    heading: 0,
+    pitch: 0,
+    orientation: NativeDeviceOrientation.portraitUp,
+    compassAccuracy: 1,
+    location: device,
+  );
 
   test('stacks annotations that fully overlap onto distinct, ordered rows', () {
     // All three POIs sit due north of the device at the same bearing, so
@@ -75,24 +75,28 @@ void main() {
     );
 
     expect(
-        result.annotations.map((a) => a.uid).toList(), ['near', 'mid', 'far'],
-        reason: 'result must stay sorted by distance ascending for '
-            "ArView's z-ordering");
+      result.annotations.map((a) => a.uid).toList(),
+      ['near', 'mid', 'far'],
+      reason:
+          'result must stay sorted by distance ascending for '
+          "ArView's z-ordering",
+    );
 
     final rowsByUid = {
       for (final a in result.annotations) a.uid: a.arPositionOffset.dy,
     };
     expect(rowsByUid['near'], 0, reason: 'closest POI keeps its natural row');
-    expect(rowsByUid.values.toSet().length, 3,
-        reason: 'three mutually-overlapping POIs need three distinct rows');
+    expect(
+      rowsByUid.values.toSet().length,
+      3,
+      reason: 'three mutually-overlapping POIs need three distinct rows',
+    );
     expect(rowsByUid['mid']! < rowsByUid['near']!, isTrue);
     expect(rowsByUid['far']! < rowsByUid['mid']!, isTrue);
   });
 
   test('does not shift annotations that do not overlap horizontally', () {
-    final annotations = [
-      _TestAnnotation('a', _dueNorthOf(device, 0.001)),
-    ];
+    final annotations = [_TestAnnotation('a', _dueNorthOf(device, 0.001))];
 
     final result = engine.layout(
       annotations: annotations,
@@ -122,20 +126,22 @@ void main() {
 
   test('only keeps POIs inside the displayed horizontal field of view', () {
     ArSensor sensorFacing(double heading) => ArSensor(
-          heading: heading,
-          pitch: 0,
-          orientation: NativeDeviceOrientation.portraitUp,
-          compassAccuracy: 1,
-          location: device,
-        );
-    List<ArAnnotation> layoutFacing(double heading) => engine.layout(
+      heading: heading,
+      pitch: 0,
+      orientation: NativeDeviceOrientation.portraitUp,
+      compassAccuracy: 1,
+      location: device,
+    );
+    List<ArAnnotation> layoutFacing(double heading) => engine
+        .layout(
           annotations: [_TestAnnotation('north', _dueNorthOf(device, 0.001))],
           arSensor: sensorFacing(heading),
           deviceLocation: device,
           width: 400,
           height: 800,
           config: config,
-        ).annotations;
+        )
+        .annotations;
 
     // Portrait 400x800 with a 58° camera FOV on the long side gives a focal
     // length of 400 / tan(29°) ≈ 721.6 px. A 200 px label stays on screen
@@ -171,21 +177,22 @@ void main() {
       );
     }
 
-    AnnotationLayoutResult layoutWithFarAt(double centerX,
-            {Map<String, int> previousRows = const {}}) =>
-        engine.layout(
-          // The near POI's label spans [100, 300].
-          annotations: [
-            _TestAnnotation('near', _dueNorthOf(device, 0.0009)),
-            farPoiAt(centerX),
-          ],
-          arSensor: sensorFacingNorth(),
-          deviceLocation: device,
-          width: 400,
-          height: 800,
-          config: config,
-          previousRows: previousRows,
-        );
+    AnnotationLayoutResult layoutWithFarAt(
+      double centerX, {
+      Map<String, int> previousRows = const {},
+    }) => engine.layout(
+      // The near POI's label spans [100, 300].
+      annotations: [
+        _TestAnnotation('near', _dueNorthOf(device, 0.0009)),
+        farPoiAt(centerX),
+      ],
+      arSensor: sensorFacingNorth(),
+      deviceLocation: device,
+      width: 400,
+      height: 800,
+      config: config,
+      previousRows: previousRows,
+    );
 
     test('returns the row of each annotation', () {
       final result = layoutWithFarAt(350);
@@ -196,8 +203,11 @@ void main() {
       final stacked = layoutWithFarAt(350).rows;
 
       // 10 px of clearance: fits on row 0, but less than the hysteresis.
-      expect(layoutWithFarAt(410).rows['far'], 0,
-          reason: 'without history the lowest free row is used');
+      expect(
+        layoutWithFarAt(410).rows['far'],
+        0,
+        reason: 'without history the lowest free row is used',
+      );
       expect(layoutWithFarAt(410, previousRows: stacked).rows['far'], 1);
 
       // 50 px of clearance: moves back down.
@@ -243,27 +253,29 @@ void main() {
 
   group('grouping', () {
     List<ArAnnotation> threeOverlapping() => [
-          _TestAnnotation('near', _dueNorthOf(device, 0.001)),
-          _TestAnnotation('mid', _dueNorthOf(device, 0.002)),
-          _TestAnnotation('far', _dueNorthOf(device, 0.003)),
-        ];
+      _TestAnnotation('near', _dueNorthOf(device, 0.001)),
+      _TestAnnotation('mid', _dueNorthOf(device, 0.002)),
+      _TestAnnotation('far', _dueNorthOf(device, 0.003)),
+    ];
 
-    AnnotationLayoutResult layout(List<ArAnnotation> annotations,
-            {double height = 800, int? maxRows}) =>
-        engine.layout(
-          annotations: annotations,
-          arSensor: sensorFacingNorth(),
-          deviceLocation: device,
-          width: 400,
-          height: height,
-          config: AnnotationLayoutConfig(
-            annotationWidth: 200,
-            annotationHeight: 75,
-            maxVisibleDistance: 1500,
-            paddingOverlap: 5,
-            maxRows: maxRows,
-          ),
-        );
+    AnnotationLayoutResult layout(
+      List<ArAnnotation> annotations, {
+      double height = 800,
+      int? maxRows,
+    }) => engine.layout(
+      annotations: annotations,
+      arSensor: sensorFacingNorth(),
+      deviceLocation: device,
+      width: 400,
+      height: height,
+      config: AnnotationLayoutConfig(
+        annotationWidth: 200,
+        annotationHeight: 75,
+        maxVisibleDistance: 1500,
+        paddingOverlap: 5,
+        maxRows: maxRows,
+      ),
+    );
 
     test('groups the farthest annotations beyond maxRows', () {
       final annotations = threeOverlapping();
@@ -315,23 +327,24 @@ void main() {
       );
     }
 
-    AnnotationLayoutResult layout(List<ArAnnotation> annotations,
-            {required bool scale}) =>
-        engine.layout(
-          annotations: annotations,
-          arSensor: sensorFacingNorth(),
-          deviceLocation: device,
-          width: 400,
-          height: 800,
-          config: AnnotationLayoutConfig(
-            annotationWidth: 200,
-            annotationHeight: 75,
-            maxVisibleDistance: 1000,
-            paddingOverlap: 5,
-            scaleWithDistance: scale,
-            minScale: 0.5,
-          ),
-        );
+    AnnotationLayoutResult layout(
+      List<ArAnnotation> annotations, {
+      required bool scale,
+    }) => engine.layout(
+      annotations: annotations,
+      arSensor: sensorFacingNorth(),
+      deviceLocation: device,
+      width: 400,
+      height: 800,
+      config: AnnotationLayoutConfig(
+        annotationWidth: 200,
+        annotationHeight: 75,
+        maxVisibleDistance: 1000,
+        paddingOverlap: 5,
+        scaleWithDistance: scale,
+        minScale: 0.5,
+      ),
+    );
 
     test('shrinks labels linearly down to minScale', () {
       final result = layout([
@@ -348,8 +361,10 @@ void main() {
     test('uses the displayed (scaled) width to detect overlaps', () {
       // Centers 150 px apart: 200 px labels overlap, labels scaled to ~0.5
       // (~100 px + spacing) do not.
-      List<ArAnnotation> twoFar() =>
-          [poi('left', 990, 125), poi('right', 995, 275)];
+      List<ArAnnotation> twoFar() => [
+        poi('left', 990, 125),
+        poi('right', 995, 275),
+      ];
 
       expect(layout(twoFar(), scale: false).rows, {'left': 0, 'right': 1});
       expect(layout(twoFar(), scale: true).rows, {'left': 0, 'right': 0});
@@ -370,8 +385,10 @@ void main() {
       expect(copy.distanceFromUser, 34);
 
       // The POI moved.
-      expect(cache.restore(_TestAnnotation('a', _dueNorthOf(device, 0.002))),
-          isFalse);
+      expect(
+        cache.restore(_TestAnnotation('a', _dueNorthOf(device, 0.002))),
+        isFalse,
+      );
 
       // The user moved.
       cache.prepare(_dueNorthOf(device, 0.0001), 1);

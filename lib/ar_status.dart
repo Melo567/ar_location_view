@@ -1,10 +1,11 @@
 import 'package:geolocator/geolocator.dart';
 
+/// Projection parameters of a layout, see `AnnotationLayoutResult.status`.
 class ArStatus {
-  ///Champ de vision horizontal de l'appareil.
+  ///Horizontal field of view of the displayed preview, in degrees.
   double hFov = 0;
 
-  ///champ de vision vertical de l'appareil
+  ///Vertical field of view of the displayed preview, in degrees.
   double vFov = 0;
 
   double hPixelPerDegree = 0;

@@ -4,8 +4,9 @@ import 'package:flutter/services.dart';
 class ArCameraInfo {
   const ArCameraInfo._();
 
-  static const MethodChannel _channel =
-      MethodChannel('pie/ar_view_location/camera');
+  static const MethodChannel _channel = MethodChannel(
+    'pie/ar_view_location/camera',
+  );
 
   /// Field of view of the back camera along its long side, in degrees, or
   /// null when it cannot be determined.

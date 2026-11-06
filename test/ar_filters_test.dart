@@ -5,17 +5,17 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
 
 Position _fix(double latitude, double accuracy, int second) => Position(
-      latitude: latitude,
-      longitude: 0,
-      timestamp: DateTime(2024).add(Duration(seconds: second)),
-      accuracy: accuracy,
-      altitude: 0,
-      heading: 0,
-      speed: 0,
-      speedAccuracy: 0,
-      altitudeAccuracy: 0,
-      headingAccuracy: 0,
-    );
+  latitude: latitude,
+  longitude: 0,
+  timestamp: DateTime(2024).add(Duration(seconds: second)),
+  accuracy: accuracy,
+  altitude: 0,
+  heading: 0,
+  speed: 0,
+  speedAccuracy: 0,
+  altitudeAccuracy: 0,
+  headingAccuracy: 0,
+);
 
 void main() {
   group('AttitudeFilter', () {

@@ -5,17 +5,18 @@ import 'package:geolocator/geolocator.dart';
 import 'package:native_device_orientation/native_device_orientation.dart';
 import 'package:vector_math/vector_math_64.dart';
 
+const _unusedMessage = 'Unused by the package. Will be removed in 4.0.0.';
+
 class ArMath {
-  ///Normalizes degree to 0-360
+  ///Normalizes degree to `[0, 360)`.
+  @Deprecated(_unusedMessage)
   static double normalizeDegree(double degree) {
-    var degreeNormalized = 360 % degree;
-    if (degreeNormalized < 0) {
-      degreeNormalized = 360 + degreeNormalized;
-    }
-    return degreeNormalized;
+    // Dart's % already returns a non-negative result for a positive divisor.
+    return degree % 360;
   }
 
   ///Normalizes degree to 0...180, 0...-180
+  @Deprecated(_unusedMessage)
   static double normalizeDegree2(double degree) {
     var degreeNormalized = degree % 360;
     if (degreeNormalized > 180) {
@@ -27,6 +28,7 @@ class ArMath {
     return degreeNormalized;
   }
 
+  @Deprecated(_unusedMessage)
   static double deltaAngle(double angle1, double angle2) {
     var deltaAngle = angle1 - angle2;
     if (deltaAngle > 180) {
@@ -37,8 +39,13 @@ class ArMath {
     return deltaAngle;
   }
 
-  static double exponentialFilter(double newValue, double previousValue,
-      double filterFactor, bool isCircular) {
+  @Deprecated(_unusedMessage)
+  static double exponentialFilter(
+    double newValue,
+    double previousValue,
+    double filterFactor,
+    bool isCircular,
+  ) {
     double newValueP = newValue;
     if (isCircular) {
       if ((newValueP - previousValue).abs() > 180) {
@@ -54,9 +61,12 @@ class ArMath {
     return filteredValue;
   }
 
+  @Deprecated(_unusedMessage)
   static double bearingFromUserToLocation(
-      Position userLocation, Position location,
-      {bool approximate = false}) {
+    Position userLocation,
+    Position location, {
+    bool approximate = false,
+  }) {
     double bearing = 0;
     if (approximate) {
       bearing = approximateBearingBetween(userLocation, location);
@@ -66,6 +76,7 @@ class ArMath {
     return bearing;
   }
 
+  @Deprecated(_unusedMessage)
   static double bearingBetween(Position startLocation, Position endLocation) {
     double bearing = 0;
     final double lat1 = startLocation.latitude.toRadians;
@@ -86,8 +97,11 @@ class ArMath {
     return bearing;
   }
 
+  @Deprecated(_unusedMessage)
   static double approximateBearingBetween(
-      Position startLocation, Position endLocation) {
+    Position startLocation,
+    Position endLocation,
+  ) {
     double bearing = 0;
     const double latLongFactor = 1.33975031663;
 
@@ -99,9 +113,10 @@ class ArMath {
     final double longitudeDistance =
         startCoordinate.longitude - endCoordinate.longitude;
 
-    bearing =
-        (atan2(longitudeDistance, (latitudeDistance * latLongFactor.toDegrees)))
-            .toDegrees;
+    bearing = (atan2(
+      longitudeDistance,
+      (latitudeDistance * latLongFactor.toDegrees),
+    )).toDegrees;
     bearing += 180.0;
 
     return bearing;

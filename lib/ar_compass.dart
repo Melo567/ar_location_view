@@ -20,12 +20,12 @@ class CompassEvent {
   final List<double>? rotationMatrix;
 
   CompassEvent.fromList(List<double>? data)
-      : heading = data?[0],
-        headingForCameraMode = data?[1],
-        accuracy = (data == null) || (data[2] == -1) ? null : data[2],
-        rotationMatrix = data != null && data.length >= 12
-            ? List<double>.unmodifiable(data.sublist(3, 12))
-            : null;
+    : heading = data?[0],
+      headingForCameraMode = data?[1],
+      accuracy = (data == null) || (data[2] == -1) ? null : data[2],
+      rotationMatrix = data != null && data.length >= 12
+          ? List<double>.unmodifiable(data.sublist(3, 12))
+          : null;
 
   @override
   String toString() {
@@ -42,15 +42,16 @@ class ArCompass {
 
   ArCompass._();
 
-  static const EventChannel _compassChannel =
-      EventChannel('pie/ar_view_location');
+  static const EventChannel _compassChannel = EventChannel(
+    'pie/ar_view_location',
+  );
   static Stream<CompassEvent>? _stream;
 
   /// Provides a [Stream] of compass events that can be listened to.
   static Stream<CompassEvent>? get events {
-    _stream ??= _compassChannel
-        .receiveBroadcastStream()
-        .map((dynamic data) => CompassEvent.fromList(data?.cast<double>()));
+    _stream ??= _compassChannel.receiveBroadcastStream().map(
+      (dynamic data) => CompassEvent.fromList(data?.cast<double>()),
+    );
     return _stream;
   }
 }

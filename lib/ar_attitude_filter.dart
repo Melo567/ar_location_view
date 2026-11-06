@@ -31,13 +31,17 @@ class AttitudeFilter {
     }
 
     final dt = (timeSeconds - lastTime).clamp(0.0, 1.0);
-    final motion =
-        (angleBetween(previous, matrix) / fastRotationDegrees).clamp(0.0, 1.0);
+    final motion = (angleBetween(previous, matrix) / fastRotationDegrees).clamp(
+      0.0,
+      1.0,
+    );
     final tau = timeConstant * (1 - motion);
     final alpha = tau <= 0 ? 1.0 : 1 - exp(-dt / tau);
 
     final blended = List<double>.generate(
-        9, (i) => previous[i] + alpha * (matrix[i] - previous[i]));
+      9,
+      (i) => previous[i] + alpha * (matrix[i] - previous[i]),
+    );
     return _value = orthonormalize(blended);
   }
 
@@ -62,8 +66,11 @@ class AttitudeFilter {
     final x = _normalize([m[0], m[1], m[2]]);
     final yRaw = [m[3], m[4], m[5]];
     final dot = x[0] * yRaw[0] + x[1] * yRaw[1] + x[2] * yRaw[2];
-    final y = _normalize(
-        [yRaw[0] - dot * x[0], yRaw[1] - dot * x[1], yRaw[2] - dot * x[2]]);
+    final y = _normalize([
+      yRaw[0] - dot * x[0],
+      yRaw[1] - dot * x[1],
+      yRaw[2] - dot * x[2],
+    ]);
     final z = [
       x[1] * y[2] - x[2] * y[1],
       x[2] * y[0] - x[0] * y[2],

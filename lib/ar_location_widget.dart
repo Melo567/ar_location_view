@@ -33,6 +33,7 @@ class ArLocationWidget extends StatefulWidget {
     this.hideWithinLocationAccuracy = false,
     this.maxRows,
     this.groupBadgeBuilder,
+    this.cameraErrorBuilder,
   });
 
   ///List of POIs
@@ -48,27 +49,38 @@ class ArLocationWidget extends StatefulWidget {
   ///Annotation view height
   final double annotationHeight;
 
-  ///Max distance marker visible
+  ///Max distance, in meters, at which a POI is shown (and the range of the
+  ///radar).
   final double maxVisibleDistance;
 
+  ///Unused.
+  @Deprecated(
+    'Unused, annotations are sized by annotationWidth and '
+    'annotationHeight. Will be removed in 4.0.0.',
+  )
   final Size? frame;
 
-  ///Callback when location change
+  ///Called with the first location, then whenever the user moved by more
+  ///than [minDistanceReload] meters. Typically used to reload the
+  ///[annotations] around the user.
   final ChangeLocationCallback onLocationChange;
 
   ///Show debug info sensor in debug mode
   final bool showDebugInfoSensor;
 
-  ///Padding when marker overlap
+  ///Vertical gap, in pixels, between two stacked overlapping labels.
   final double paddingOverlap;
 
-  ///Offset overlap y
+  ///Vertical distance, in pixels, between two stacked overlapping labels,
+  ///before [paddingOverlap]. Defaults to [annotationHeight].
   final double? yOffsetOverlap;
 
-  ///accessory
+  ///Widget drawn above the AR overlay once the camera is ready, e.g.
+  ///buttons or a legend. Position it yourself (it is a child of a [Stack]).
   final Widget? accessory;
 
-  ///Min distance reload
+  ///Distance, in meters, the user must move before [onLocationChange] is
+  ///called again.
   final double minDistanceReload;
 
   ///Scale annotation view with distance from user
@@ -93,8 +105,12 @@ class ArLocationWidget extends StatefulWidget {
   ///Radar width
   final double? radarWidth;
 
+  ///Shows [loadingWidget] above everything, e.g. while [annotations] are
+  ///being fetched.
   final bool isLoading;
 
+  ///Widget shown while [isLoading]. Defaults to a centered
+  ///[CircularProgressIndicator].
   final Widget? loadingWidget;
 
   ///Source of fused sensor/location samples, forwarded to [ArView].
@@ -125,6 +141,10 @@ class ArLocationWidget extends StatefulWidget {
   ///[ArView.groupBadgeBuilder].
   final AnnotationGroupBadgeBuilder? groupBadgeBuilder;
 
+  ///Widget shown instead of the camera preview when the camera permission
+  ///is denied or the camera is unavailable, see [ArCamera.errorBuilder].
+  final ArCameraErrorBuilder? cameraErrorBuilder;
+
   @override
   State<ArLocationWidget> createState() => _ArLocationWidgetState();
 }
@@ -149,12 +169,12 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
             initCam = true;
             setState(() {});
           },
+          errorBuilder: widget.cameraErrorBuilder,
         ),
         if (initCam)
           ArView(
             annotations: widget.annotations,
             annotationViewBuilder: widget.annotationViewBuilder,
-            frame: widget.frame ?? const Size(100, 75),
             onLocationChange: widget.onLocationChange,
             annotationWidth: widget.annotationWidth,
             annotationHeight: widget.annotationHeight,
@@ -182,11 +202,9 @@ class _ArLocationWidgetState extends State<ArLocationWidget> {
         if (initCam && widget.accessory != null) widget.accessory!,
         if (widget.isLoading)
           if (widget.loadingWidget == null)
-            const Center(
-              child: CircularProgressIndicator(),
-            )
+            const Center(child: CircularProgressIndicator())
           else
-            widget.loadingWidget!
+            widget.loadingWidget!,
       ],
     );
   }

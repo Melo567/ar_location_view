@@ -9,11 +9,7 @@ enum AnnotationType { pharmacy, hotel, library }
 class Annotation extends ArAnnotation {
   final AnnotationType type;
 
-  Annotation({
-    required super.uid,
-    required super.position,
-    required this.type,
-  });
+  Annotation({required super.uid, required super.position, required this.type});
 }
 
 AnnotationType getRandomAnnotation() {
@@ -23,27 +19,31 @@ AnnotationType getRandomAnnotation() {
 }
 
 ///Create fake annotations for example
-List<Annotation> fakeAnnotation(
-    {required Position position, int distance = 1500, int numberMaxPoi = 100}) {
-  return List<Annotation>.generate(
-    numberMaxPoi,
-    (index) {
-      return Annotation(
-        uid: const Uuid().v1(),
-        position: getRandomLocation(
-          position.latitude,
-          position.longitude,
-          distance / 100000,
-          distance / 100000,
-        ),
-        type: getRandomAnnotation(),
-      );
-    },
-  );
+List<Annotation> fakeAnnotation({
+  required Position position,
+  int distance = 1500,
+  int numberMaxPoi = 100,
+}) {
+  return List<Annotation>.generate(numberMaxPoi, (index) {
+    return Annotation(
+      uid: const Uuid().v1(),
+      position: getRandomLocation(
+        position.latitude,
+        position.longitude,
+        distance / 100000,
+        distance / 100000,
+      ),
+      type: getRandomAnnotation(),
+    );
+  });
 }
 
-Position getRandomLocation(double centerLatitude, double centerLongitude,
-    double deltaLat, double deltaLon) {
+Position getRandomLocation(
+  double centerLatitude,
+  double centerLongitude,
+  double deltaLat,
+  double deltaLon,
+) {
   var lat = centerLatitude;
   var lon = centerLongitude;
 

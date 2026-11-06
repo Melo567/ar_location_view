@@ -20,9 +20,18 @@ class RadarPainter extends CustomPainter {
     required this.heading,
     required this.markerColor,
     required this.background,
+    this.fieldOfView = defaultFieldOfView,
   });
 
-  final angle = pi / 7;
+  /// Cone drawn when the field of view is unknown.
+  static const defaultFieldOfView = 360 / 7;
+
+  /// Horizontal field of view of the camera, in degrees, drawn as the
+  /// visible cone.
+  final double fieldOfView;
+
+  /// Half of the cone's aperture, in radians.
+  double get angle => fieldOfView.toRadians / 2;
 
   final Color markerColor;
   final Color background;
@@ -38,29 +47,34 @@ class RadarPainter extends CustomPainter {
     final center = Offset(radius, radius);
     final Paint paint = Paint()..color = background.withAlpha(100);
     final Path path = Path();
-    final pointA =
-        Offset(radius * (1 - sin(angleView)), radius * (1 - cos(angleView)));
-    final pointB =
-        Offset(radius * (1 - sin(angleView1)), radius * (1 - cos(angleView1)));
+    final pointA = Offset(
+      radius * (1 - sin(angleView)),
+      radius * (1 - cos(angleView)),
+    );
+    final pointB = Offset(
+      radius * (1 - sin(angleView1)),
+      radius * (1 - cos(angleView1)),
+    );
     path.moveTo(pointA.dx, pointA.dy);
     path.lineTo(radius, radius);
     path.lineTo(pointB.dx, pointB.dy);
     path.arcToPoint(pointA, radius: Radius.circular(radius));
 
     final Paint paint2 = Paint()
-      ..shader = RadialGradient(
-        colors: [
-          Colors.blueAccent.withAlpha(168),
-          Colors.blueAccent.withAlpha(20),
-        ],
-      ).createShader(Rect.fromCircle(
-        center: Offset(radius, radius),
-        radius: radius,
-      ))
+      ..shader =
+          RadialGradient(
+            colors: [
+              Colors.blueAccent.withAlpha(168),
+              Colors.blueAccent.withAlpha(20),
+            ],
+          ).createShader(
+            Rect.fromCircle(center: Offset(radius, radius), radius: radius),
+          )
       ..style = PaintingStyle.fill;
     canvas.save();
     canvas.clipPath(
-        Path()..addOval(Rect.fromCircle(center: center, radius: radius)));
+      Path()..addOval(Rect.fromCircle(center: center, radius: radius)),
+    );
     canvas.drawCircle(center, radius, paint);
     canvas.drawPath(path, paint2);
     drawMarker(canvas, arAnnotations, radius);
@@ -71,7 +85,10 @@ class RadarPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => true;
 
   void drawMarker(
-      Canvas canvas, List<ArAnnotation> annotations, double radius) {
+    Canvas canvas,
+    List<ArAnnotation> annotations,
+    double radius,
+  ) {
     final Paint paint = Paint()..color = markerColor;
     for (final annotation in annotations) {
       // Beyond the radar range the marker would be drawn outside the disc.

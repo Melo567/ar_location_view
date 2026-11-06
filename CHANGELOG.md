@@ -1,3 +1,42 @@
+## 3.1.0
+
+**Performance & battery**
+
+* `ArView` no longer calls `annotationViewBuilder` for every annotation on every frame: a label is rebuilt only when its `distanceFromUser` or its grouped annotations change, when `ArView` is rebuilt by its parent, or when an inherited widget it depends on changes. If your builder reads state that changes without rebuilding `ArView`, rebuild it (e.g. `setState` in its parent).
+* The `ArSensorManager` created by `ArView` is paused while the app is in background (GPS, compass and accelerometer used to keep running). New `ArSensorManager.pause()` / `resume()` for managers you provide yourself.
+* The radar is drawn on its own layer (`RepaintBoundary`).
+
+**Android**
+
+* The compass and gyroscope `<uses-feature>` declared by the plugin are now `android:required="false"`, and `android.hardware.camera.level.full` is removed. They are merged into the app and used to hide it on the Play Store from every device lacking them, notably all devices whose camera is not at the Camera2 FULL level.
+* Remove the unneeded `INTERNET` permission and the deprecated manifest `package` attribute.
+
+**iOS**
+
+* Add a privacy manifest (`PrivacyInfo.xcprivacy`), raise the minimum to iOS 13 and fill in the podspec metadata.
+
+**Camera & permissions**
+
+* `ArCamera` shows a loading indicator while the camera permission is requested, instead of "Need camera authorization".
+* When the camera or location permission was denied and is granted from the system settings, the view starts when the app returns to the foreground. A camera that failed to start is retried on resume.
+* New `cameraErrorBuilder` on `ArLocationWidget` (`errorBuilder` on `ArCamera`) to customize the camera error, with `ArCameraErrorType`.
+
+**New**
+
+* The radar cone matches the camera's horizontal field of view (`RadarPainter.fieldOfView`) instead of a fixed ~51°.
+* `ArSensorManager(locationSettings:)` configures the position stream.
+* `ArSensorManager(backend:)` / `ArSensorBackend` replace the platform streams and permission calls, to test without hardware.
+
+**Deprecations**
+
+* `ArView.frame` and `ArLocationWidget.frame`, which were unused.
+* The `ArMath` helpers unused by the package (`normalizeDegree`, `normalizeDegree2`, `deltaAngle`, `exponentialFilter`, `bearing*`). `ArMath.normalizeDegree` is also fixed: it computed `360 % degree` instead of `degree % 360`.
+
+**Other**
+
+* Require Dart 3.9 / Flutter 3.35, as the dependencies already did.
+* Rewritten README, documented parameters, CI (format, analyze, tests, pana, example builds), tests for `ArSensorManager`, `ArCamera`, `CompassEvent` and `RadarPainter`.
+
 ## 3.0.0
 
 **Breaking changes**
