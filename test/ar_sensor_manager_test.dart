@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:ar_location_view/ar_location_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -26,7 +26,6 @@ class _FakeBackend {
   final accelerometer = StreamController<AccelerometerEvent>.broadcast();
   final compass = StreamController<CompassEvent>.broadcast();
   final position = StreamController<Position>.broadcast();
-  final orientation = StreamController<NativeDeviceOrientation>.broadcast();
 
   PermissionStatus status = PermissionStatus.granted;
   PermissionStatus requestResult = PermissionStatus.granted;
@@ -35,15 +34,10 @@ class _FakeBackend {
   int requests = 0;
   LocationSettings? locationSettings;
 
-  bool get sensorsRunning =>
-      compass.hasListener && position.hasListener && orientation.hasListener;
+  bool get sensorsRunning => compass.hasListener && position.hasListener;
 
-  Future<void> close() => Future.wait([
-    accelerometer.close(),
-    compass.close(),
-    position.close(),
-    orientation.close(),
-  ]);
+  Future<void> close() =>
+      Future.wait([accelerometer.close(), compass.close(), position.close()]);
 
   ArSensorBackend get backend => ArSensorBackend(
     accelerometer: () => accelerometer.stream,
@@ -52,7 +46,6 @@ class _FakeBackend {
       this.locationSettings = locationSettings;
       return position.stream;
     },
-    orientation: () => orientation.stream,
     locationPermissionStatus: () async {
       statusChecks++;
       return status;
@@ -204,6 +197,54 @@ void main() {
     expect(arSensor.heading, 42);
     expect(arSensor.compassAccuracy, -1);
     expect(arSensor.rotationMatrix, isNull);
+  });
+
+  group('orientation', () {
+    // Device upright in landscape left: gravity along its x axis.
+    AccelerometerEvent upright() =>
+        AccelerometerEvent(9.81, 0, 0, DateTime(2024));
+
+    test('is the one sent with the compass events', () async {
+      create().init();
+      await _flush();
+      final sample = manager.arSensor.first;
+      fake.compass.add(
+        CompassEvent.fromList([
+          0,
+          0,
+          5,
+          ...ArRotation.fromHeadingPitch(0, 0),
+          1,
+        ]),
+      );
+
+      expect((await sample).orientation, DeviceOrientation.landscapeLeft);
+    });
+
+    test('is used by the accelerometer pitch fallback', () async {
+      create().init();
+      await _flush();
+      fake.compass.add(CompassEvent.fromList([0, 0, 5, 1]));
+      await _flush();
+      final sample = manager.arSensor.first;
+      fake.accelerometer.add(upright());
+      final arSensor = await sample;
+
+      expect(arSensor.orientation, DeviceOrientation.landscapeLeft);
+      expect(arSensor.pitch, closeTo(0, 1e-6));
+    });
+
+    test('defaults to portrait up', () async {
+      create().init();
+      await _flush();
+      final sample = manager.arSensor.first;
+      // Upright in portrait: gravity along the device y axis.
+      fake.accelerometer.add(AccelerometerEvent(0, 9.81, 0, DateTime(2024)));
+      final arSensor = await sample;
+
+      expect(arSensor.orientation, DeviceOrientation.portraitUp);
+      expect(arSensor.pitch, closeTo(0, 1e-6));
+    });
   });
 
   group('pause', () {

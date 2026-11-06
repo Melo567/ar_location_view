@@ -102,9 +102,10 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
           location.headingOrientation = headingOrientation;
       }
 
-      /// Sends `[heading, headingForCameraMode, accuracy, m0...m8]` where `m`
-      /// is the row-major world (East, North, Up) -> screen rotation matrix
-      /// expected by `ArSensor.rotationMatrix`.
+      /// Sends `[heading, headingForCameraMode, accuracy, m0...m8, orientation]`
+      /// where `m` is the row-major world (East, North, Up) -> screen rotation
+      /// matrix expected by `ArSensor.rotationMatrix`, and `orientation` the
+      /// UI orientation (see `orientationCode`).
       private func emitAttitude(_ data: CMDeviceMotion) {
           guard let sink = eventSink else { return; }
           let r = data.attitude.rotationMatrix;
@@ -122,14 +123,41 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
               simd_double3(-1, 0, 0),
               simd_double3(0, 0, 1),
           ]);
-          let worldToScreen = deviceToScreen() * m * enuToReference;
+          let orientation = interfaceOrientation();
+          let worldToScreen = deviceToScreen(orientation) * m * enuToReference;
           var payload = [lastHeading, lastHeadingForCameraMode, lastHeadingAccuracy];
           for row in 0..<3 {
               for col in 0..<3 {
                   payload.append(worldToScreen[col, row]);
               }
           }
+          payload.append(Self.orientationCode(orientation));
           sink(payload);
+      }
+
+      private func interfaceOrientation() -> UIInterfaceOrientation {
+          if #available(iOS 13.0, *) {
+              return UIApplication.shared.connectedScenes
+                  .compactMap { $0 as? UIWindowScene }
+                  .first?.interfaceOrientation ?? .unknown;
+          } else {
+              return UIApplication.shared.statusBarOrientation;
+          }
+      }
+
+      /// Index of Flutter's `DeviceOrientation` (0 portraitUp, 1 landscapeLeft,
+      /// 2 portraitDown, 3 landscapeRight), or -1 when unknown. Left and right
+      /// are swapped: `UIInterfaceOrientation` is the rotation needed to get
+      /// back to portrait, not the rotation of the device (same mapping as
+      /// the native_device_orientation plugin).
+      private static func orientationCode(_ orientation: UIInterfaceOrientation) -> Double {
+          switch orientation {
+          case .portrait: return 0;
+          case .landscapeRight: return 1;
+          case .portraitUpsideDown: return 2;
+          case .landscapeLeft: return 3;
+          default: return -1;
+          }
       }
 
       /// Picks the matrix convention whose "down" direction matches the
@@ -152,15 +180,7 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
 
       /// Rotation from the portrait device frame to the current UI frame
       /// (x right, y up of the displayed screen).
-      private func deviceToScreen() -> simd_double3x3 {
-          let orientation: UIInterfaceOrientation;
-          if #available(iOS 13.0, *) {
-              orientation = UIApplication.shared.connectedScenes
-                  .compactMap { $0 as? UIWindowScene }
-                  .first?.interfaceOrientation ?? .portrait;
-          } else {
-              orientation = UIApplication.shared.statusBarOrientation;
-          }
+      private func deviceToScreen(_ orientation: UIInterfaceOrientation) -> simd_double3x3 {
           switch orientation {
           case .landscapeRight:
               // Device top points left: screen right = device -y, up = device x.
@@ -224,7 +244,12 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
               // Without motion data, the heading alone is still useful; with
               // it, `emitAttitude` already streams at a higher rate.
               if !motion.isDeviceMotionActive {
-                  eventSink?([heading, headingForCameraMode, newHeading.headingAccuracy]);
+                  eventSink?([
+                      heading,
+                      headingForCameraMode,
+                      newHeading.headingAccuracy,
+                      Self.orientationCode(interfaceOrientation()),
+                  ]);
               }
           }
       }

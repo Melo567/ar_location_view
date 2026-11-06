@@ -1,8 +1,8 @@
 import 'dart:math';
 
 import 'package:ar_location_view/ar_extension.dart';
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
 import 'package:vector_math/vector_math_64.dart';
 
 const _unusedMessage = 'Unused by the package. Will be removed in 4.0.0.';
@@ -124,14 +124,14 @@ class ArMath {
 
   static double calculatePitch({
     required Vector3 gravity,
-    required NativeDeviceOrientation orientation,
+    required DeviceOrientation orientation,
   }) {
     double pitch = 0;
-    if (orientation == NativeDeviceOrientation.portraitDown) {
+    if (orientation == DeviceOrientation.portraitDown) {
       pitch = atan2(-gravity.y, gravity.z);
-    } else if (orientation == NativeDeviceOrientation.landscapeLeft) {
+    } else if (orientation == DeviceOrientation.landscapeLeft) {
       pitch = atan2(gravity.x, gravity.z);
-    } else if (orientation == NativeDeviceOrientation.landscapeRight) {
+    } else if (orientation == DeviceOrientation.landscapeRight) {
       pitch = atan2(-gravity.x, gravity.z);
     } else {
       pitch = atan2(gravity.y, gravity.z);

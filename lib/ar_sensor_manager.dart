@@ -1,7 +1,7 @@
 import 'dart:async';
 
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:vector_math/vector_math_64.dart';
@@ -19,7 +19,6 @@ class ArSensorBackend {
     this.accelerometer = _accelerometer,
     this.compass = _compass,
     this.position = Geolocator.getPositionStream,
-    this.orientation = _orientation,
     this.locationPermissionStatus = _locationPermissionStatus,
     this.requestLocationPermission = _requestLocationPermission,
   });
@@ -35,8 +34,6 @@ class ArSensorBackend {
   final Stream<Position> Function({LocationSettings? locationSettings})
   position;
 
-  final Stream<NativeDeviceOrientation> Function() orientation;
-
   final Future<PermissionStatus> Function() locationPermissionStatus;
 
   /// Prompts the user for the location permission.
@@ -47,11 +44,6 @@ class ArSensorBackend {
       accelerometerEventStream(samplingPeriod: SensorInterval.gameInterval);
 
   static Stream<CompassEvent>? _compass() => ArCompass.events;
-
-  static Stream<NativeDeviceOrientation> _orientation() =>
-      NativeDeviceOrientationCommunicator().onOrientationChanged(
-        useSensor: true,
-      );
 
   static Future<PermissionStatus> _locationPermissionStatus() =>
       Permission.location.status;
@@ -97,8 +89,9 @@ class ArSensorManager implements ArSensorSource {
   StreamSubscription<AccelerometerEvent>? _accelerationStream;
   StreamSubscription<CompassEvent>? _headingStream;
   StreamSubscription<Position>? _positionSubscription;
-  StreamSubscription<NativeDeviceOrientation>? _orientationStreamSubscription;
-  NativeDeviceOrientation _orientation = NativeDeviceOrientation.portraitUp;
+
+  /// UI orientation, received with the compass events.
+  DeviceOrientation _orientation = DeviceOrientation.portraitUp;
 
   Position? _position;
 
@@ -180,10 +173,6 @@ class ArSensorManager implements ArSensorSource {
             error,
           ),
         );
-
-    _orientationStreamSubscription = backend.orientation().listen((event) {
-      _orientation = event;
-    });
   }
 
   void _stopSensors() {
@@ -193,8 +182,6 @@ class ArSensorManager implements ArSensorSource {
     _headingStream = null;
     _positionSubscription?.cancel();
     _positionSubscription = null;
-    _orientationStreamSubscription?.cancel();
-    _orientationStreamSubscription = null;
   }
 
   void _resetFilters() {
@@ -205,6 +192,9 @@ class ArSensorManager implements ArSensorSource {
   }
 
   void _onCompass(CompassEvent event) {
+    // Before the pitch fallback below reads it.
+    final orientation = event.orientation;
+    if (orientation != null) _orientation = orientation;
     // A null accuracy means "unknown/uncalibrated", not "no heading":
     // dropping those events froze the heading until calibration.
     _compassAccuracy = event.accuracy ?? -1;

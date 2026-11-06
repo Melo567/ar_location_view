@@ -4,7 +4,7 @@ import 'package:ar_location_view/ar_location_view.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
+import 'package:flutter/services.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 
@@ -155,7 +155,7 @@ void main() {
       ArSensor(
         heading: 0,
         pitch: 0,
-        orientation: NativeDeviceOrientation.portraitUp,
+        orientation: DeviceOrientation.portraitUp,
         compassAccuracy: 1,
         location: _at(0),
       ),
@@ -197,7 +197,7 @@ void main() {
       ArSensor(
         heading: 0,
         pitch: 0,
-        orientation: NativeDeviceOrientation.portraitUp,
+        orientation: DeviceOrientation.portraitUp,
         compassAccuracy: 1,
         location: _at(0),
       ),
@@ -238,7 +238,7 @@ void main() {
     ArSensor sample({double heading = 0, double latitude = 0}) => ArSensor(
       heading: heading,
       pitch: 0,
-      orientation: NativeDeviceOrientation.portraitUp,
+      orientation: DeviceOrientation.portraitUp,
       compassAccuracy: 1,
       location: _at(latitude),
     );
@@ -296,7 +296,6 @@ void main() {
         accelerometer: () => accelerometer.stream,
         compass: () => null,
         position: ({locationSettings}) => const Stream.empty(),
-        orientation: () => const Stream.empty(),
         locationPermissionStatus: () async => PermissionStatus.granted,
         requestLocationPermission: () async => PermissionStatus.granted,
       ),

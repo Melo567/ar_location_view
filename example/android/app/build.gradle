@@ -7,7 +7,8 @@ plugins {
 
 android {
     namespace "com.pie.technology.ar.location.view.ar_location_view_example"
-    compileSdk flutter.compileSdkVersion
+    // permission_handler 13 requires compiling against Android SDK 37.
+    compileSdk 37
     ndkVersion flutter.ndkVersion
 
     compileOptions {

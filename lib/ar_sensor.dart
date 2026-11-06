@@ -1,5 +1,5 @@
+import 'package:flutter/services.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
 
 class ArSensor {
   /// Direction the back camera points to, in degrees from true north,
@@ -10,7 +10,10 @@ class ArSensor {
   /// upright, negative when the camera points down.
   final double pitch;
   final Position? location;
-  final NativeDeviceOrientation orientation;
+
+  /// Orientation of the UI (not of the device: it stays [DeviceOrientation.portraitUp]
+  /// when the app is locked in portrait), which [rotationMatrix] is relative to.
+  final DeviceOrientation orientation;
 
   /// Estimated heading error in degrees (±), or -1 when unknown, e.g. while
   /// the compass needs calibration. On Android this is an approximation

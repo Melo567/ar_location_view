@@ -1,6 +1,7 @@
 package com.pie.technology.ar.location.view.ar_location_view;
 
 import android.content.Context;
+import android.content.res.Configuration;
 import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -62,6 +63,13 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
     private float[] magneticValues = new float[3];
 
     private static final long DECLINATION_REFRESH_MS = 60_000;
+
+    // Indexes of Flutter's DeviceOrientation, sent with each compass event.
+    private static final int ORIENTATION_UNKNOWN = -1;
+    private static final int ORIENTATION_PORTRAIT_UP = 0;
+    private static final int ORIENTATION_LANDSCAPE_LEFT = 1;
+    private static final int ORIENTATION_PORTRAIT_DOWN = 2;
+    private static final int ORIENTATION_LANDSCAPE_RIGHT = 3;
 
     @Nullable
     private EventChannel channel;
@@ -226,6 +234,26 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
             }
         }
         return best;
+    }
+
+    /**
+     * UI orientation as the index of Flutter's {@code DeviceOrientation}
+     * (0 portraitUp, 1 landscapeLeft, 2 portraitDown, 3 landscapeRight), or
+     * -1 when unknown. Crossing the configuration with the rotation also
+     * handles devices whose natural orientation is landscape, as the
+     * native_device_orientation plugin did.
+     */
+    private int currentOrientation() {
+        int rotation = display.getRotation();
+        boolean notFlipped = rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_90;
+        switch (context.getResources().getConfiguration().orientation) {
+            case Configuration.ORIENTATION_PORTRAIT:
+                return notFlipped ? ORIENTATION_PORTRAIT_UP : ORIENTATION_PORTRAIT_DOWN;
+            case Configuration.ORIENTATION_LANDSCAPE:
+                return notFlipped ? ORIENTATION_LANDSCAPE_LEFT : ORIENTATION_LANDSCAPE_RIGHT;
+            default:
+                return ORIENTATION_UNKNOWN;
+        }
     }
 
     private boolean isCompassSensorAvailable() {
@@ -397,14 +425,16 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
                 double heading = (Math.toDegrees(orientation[0]) + declination + 360.0) % 360.0;
 
                 // Same layout and units as iOS: [heading, headingForCameraMode,
-                // accuracy in degrees]. The axes are already remapped for the
-                // back camera when the device is upright, so both headings match.
+                // accuracy in degrees, m0...m8, orientation]. The axes are
+                // already remapped for the back camera when the device is
+                // upright, so both headings match.
                 double[] worldToScreen = worldToScreen(screenToWorld, declination);
-                double[] v = new double[12];
+                double[] v = new double[13];
                 v[0] = heading;
                 v[1] = heading;
                 v[2] = getAccuracy();
                 System.arraycopy(worldToScreen, 0, v, 3, 9);
+                v[12] = currentOrientation();
                 notifyCompassChangeListeners(v);
 
                 // Update the compassUpdateNextTimestamp

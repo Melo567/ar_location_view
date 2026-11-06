@@ -19,13 +19,42 @@ class CompassEvent {
   /// cannot provide it (e.g. no motion sensors on a simulator).
   final List<double>? rotationMatrix;
 
+  /// Orientation of the UI, which [rotationMatrix] is relative to. Null when
+  /// unknown, or when the platform side predates it.
+  final DeviceOrientation? orientation;
+
+  /// Reads the platform payload: `[heading, headingForCameraMode, accuracy]`,
+  /// followed by the 9 values of [rotationMatrix] when available, then by
+  /// the [orientation] (an index of [DeviceOrientation.values], -1 when
+  /// unknown). Payloads without the orientation (3 or 12 values) are still
+  /// read.
   CompassEvent.fromList(List<double>? data)
     : heading = data?[0],
       headingForCameraMode = data?[1],
       accuracy = (data == null) || (data[2] == -1) ? null : data[2],
       rotationMatrix = data != null && data.length >= 12
           ? List<double>.unmodifiable(data.sublist(3, 12))
-          : null;
+          : null,
+      orientation = _orientation(data);
+
+  static DeviceOrientation? _orientation(List<double>? data) {
+    if (data == null || (data.length != 4 && data.length < 13)) return null;
+    final code = data[data.length == 4 ? 3 : 12];
+    final index = code.toInt();
+    if (index != code || index < 0 || index >= _orientations.length) {
+      return null;
+    }
+    return _orientations[index];
+  }
+
+  /// Codes sent by the platform, which are the indexes of
+  /// [DeviceOrientation], listed explicitly to not depend on its order.
+  static const _orientations = [
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.landscapeLeft,
+    DeviceOrientation.portraitDown,
+    DeviceOrientation.landscapeRight,
+  ];
 
   @override
   String toString() {

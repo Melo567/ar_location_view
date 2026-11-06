@@ -1,4 +1,5 @@
 import 'package:ar_location_view/ar_location_view.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
@@ -31,6 +32,37 @@ void main() {
 
       expect(event.rotationMatrix, matrix);
       expect(() => event.rotationMatrix!.add(0), throwsUnsupportedError);
+    });
+
+    test('reads the orientation after the rotation matrix', () {
+      final matrix = <double>[1, 0, 0, 0, 1, 0, 0, 0, 1];
+      final event = CompassEvent.fromList([10, 20, 15, ...matrix, 1]);
+
+      expect(event.rotationMatrix, matrix);
+      expect(event.orientation, DeviceOrientation.landscapeLeft);
+    });
+
+    test('reads the orientation of a heading-only payload', () {
+      final event = CompassEvent.fromList([10, 20, 15, 3]);
+
+      expect(event.rotationMatrix, isNull);
+      expect(event.orientation, DeviceOrientation.landscapeRight);
+    });
+
+    test('has no orientation in payloads that predate it', () {
+      final matrix = <double>[1, 0, 0, 0, 1, 0, 0, 0, 1];
+
+      expect(CompassEvent.fromList([10, 20, 15]).orientation, isNull);
+      expect(
+        CompassEvent.fromList([10, 20, 15, ...matrix]).orientation,
+        isNull,
+      );
+    });
+
+    test('maps unknown or invalid orientation codes to null', () {
+      for (final code in [-1.0, 4.0, 1.5]) {
+        expect(CompassEvent.fromList([10, 20, 15, code]).orientation, isNull);
+      }
     });
   });
 }

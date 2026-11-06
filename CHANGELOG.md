@@ -35,6 +35,8 @@
 **Other**
 
 * Require Dart 3.9 / Flutter 3.35, as the dependencies already did.
+* Allow `permission_handler` 13, which requires the app to compile against Android SDK 37 (`compileSdk 37`); `permission_handler` 12 is still supported.
+* Example: latest dependencies, AGP 8.13 / Kotlin 2.3.20, iOS plugins integrated with CocoaPods only (Swift Package Manager disabled).
 * Rewritten README, documented parameters, CI (format, analyze, tests, pana, example builds), tests for `ArSensorManager`, `ArCamera`, `CompassEvent` and `RadarPainter`.
 
 ## 3.0.0

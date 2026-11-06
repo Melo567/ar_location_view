@@ -3,7 +3,7 @@ import 'dart:math';
 import 'package:ar_location_view/ar_location_view.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:geolocator/geolocator.dart';
-import 'package:native_device_orientation/native_device_orientation.dart';
+import 'package:flutter/services.dart';
 
 class _TestAnnotation extends ArAnnotation {
   _TestAnnotation(String uid, Position position)
@@ -68,7 +68,7 @@ void main() {
       ArSensor(
         heading: heading,
         pitch: pitch,
-        orientation: NativeDeviceOrientation.portraitUp,
+        orientation: DeviceOrientation.portraitUp,
         compassAccuracy: 1,
         location: device,
         rotationMatrix: m,

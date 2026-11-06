@@ -64,6 +64,18 @@ your manifest. The compass and gyroscope are declared as optional features
 (the plugin falls back when they are missing), so they do not restrict the
 devices your app is available to on the Play Store.
 
+With `permission_handler` 13 (resolved by default), compile your app
+against Android SDK 37 in `android/app/build.gradle`:
+
+```groovy
+android {
+    compileSdk 37
+}
+```
+
+To stay on a lower `compileSdk`, pin `permission_handler: ^12.0.1` in your
+app's `pubspec.yaml`.
+
 ## Usage
 
 Extend `ArAnnotation` with your own data:
