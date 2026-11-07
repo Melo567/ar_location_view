@@ -53,6 +53,9 @@ jobs:
           cache: true
       - run: flutter build apk --debug
         working-directory: example
+      - name: Native unit tests (JUnit)
+        run: ./gradlew :ar_location_view:testDebugUnitTest
+        working-directory: example/android
 
   build-ios:
     name: Build example (iOS)
@@ -65,3 +68,10 @@ jobs:
           cache: true
       - run: flutter build ios --simulator --debug
         working-directory: example
+      - name: Native unit tests (XCTest)
+        working-directory: example/ios
+        run: |
+          DEVICE=$(xcrun simctl list devices available | grep -m1 -oE 'iPhone[^(]+' | sed 's/ *$//')
+          xcodebuild test -workspace Runner.xcworkspace -scheme Runner \
+            -destination "platform=iOS Simulator,name=$DEVICE" \
+            -only-testing:RunnerTests

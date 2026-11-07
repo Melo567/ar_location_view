@@ -1,7 +1,6 @@
 package com.pie.technology.ar.location.view.ar_location_view;
 
 import android.content.Context;
-import android.content.res.Configuration;
 import android.hardware.GeomagneticField;
 import android.hardware.Sensor;
 import android.hardware.SensorEvent;
@@ -63,13 +62,6 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
     private float[] magneticValues = new float[3];
 
     private static final long DECLINATION_REFRESH_MS = 60_000;
-
-    // Indexes of Flutter's DeviceOrientation, sent with each compass event.
-    private static final int ORIENTATION_UNKNOWN = -1;
-    private static final int ORIENTATION_PORTRAIT_UP = 0;
-    private static final int ORIENTATION_LANDSCAPE_LEFT = 1;
-    private static final int ORIENTATION_PORTRAIT_DOWN = 2;
-    private static final int ORIENTATION_LANDSCAPE_RIGHT = 3;
 
     @Nullable
     private EventChannel channel;
@@ -236,24 +228,10 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
         return best;
     }
 
-    /**
-     * UI orientation as the index of Flutter's {@code DeviceOrientation}
-     * (0 portraitUp, 1 landscapeLeft, 2 portraitDown, 3 landscapeRight), or
-     * -1 when unknown. Crossing the configuration with the rotation also
-     * handles devices whose natural orientation is landscape, as the
-     * native_device_orientation plugin did.
-     */
+    /** UI orientation, see {@link CompassMath#orientation}. */
     private int currentOrientation() {
-        int rotation = display.getRotation();
-        boolean notFlipped = rotation == Surface.ROTATION_0 || rotation == Surface.ROTATION_90;
-        switch (context.getResources().getConfiguration().orientation) {
-            case Configuration.ORIENTATION_PORTRAIT:
-                return notFlipped ? ORIENTATION_PORTRAIT_UP : ORIENTATION_PORTRAIT_DOWN;
-            case Configuration.ORIENTATION_LANDSCAPE:
-                return notFlipped ? ORIENTATION_LANDSCAPE_LEFT : ORIENTATION_LANDSCAPE_RIGHT;
-            default:
-                return ORIENTATION_UNKNOWN;
-        }
+        return CompassMath.orientation(
+                context.getResources().getConfiguration().orientation, display.getRotation());
     }
 
     private boolean isCompassSensorAvailable() {
@@ -424,73 +402,20 @@ public class ArLocationViewPlugin implements FlutterPlugin, StreamHandler {
                 updateDeclinationIfNeeded(currentTime);
                 double heading = (Math.toDegrees(orientation[0]) + declination + 360.0) % 360.0;
 
-                // Same layout and units as iOS: [heading, headingForCameraMode,
-                // accuracy in degrees, m0...m8, orientation]. The axes are
-                // already remapped for the back camera when the device is
-                // upright, so both headings match.
-                double[] worldToScreen = worldToScreen(screenToWorld, declination);
-                double[] v = new double[13];
-                v[0] = heading;
-                v[1] = heading;
-                v[2] = getAccuracy();
-                System.arraycopy(worldToScreen, 0, v, 3, 9);
-                v[12] = currentOrientation();
-                notifyCompassChangeListeners(v);
+                double[] worldToScreen = CompassMath.worldToScreen(screenToWorld, declination);
+                notifyCompassChangeListeners(CompassMath.payload(
+                        heading,
+                        CompassMath.accuracyDegrees(lastAccuracySensorStatus),
+                        worldToScreen,
+                        currentOrientation()));
 
                 // Update the compassUpdateNextTimestamp
                 compassUpdateNextTimestamp = currentTime + COMPASS_UPDATE_RATE_MS;
             }
 
-            /**
-             * Converts a screen -> magnetic ENU matrix into the row-major true
-             * ENU -> screen matrix expected by the Dart side
-             * ({@code ArSensor.rotationMatrix}).
-             */
-            private double[] worldToScreen(float[] screenToMagnetic, float declinationDegrees) {
-                // Magnetic -> true world is a rotation around Up by the
-                // declination (east positive).
-                double d = Math.toRadians(declinationDegrees);
-                double cos = Math.cos(d);
-                double sin = Math.sin(d);
-                double[] screenToTrue = new double[9];
-                for (int col = 0; col < 3; col++) {
-                    double east = screenToMagnetic[col];
-                    double north = screenToMagnetic[3 + col];
-                    screenToTrue[col] = cos * east + sin * north;
-                    screenToTrue[3 + col] = -sin * east + cos * north;
-                    screenToTrue[6 + col] = screenToMagnetic[6 + col];
-                }
-                // Rotation matrices are orthonormal: the inverse is the transpose.
-                double[] result = new double[9];
-                for (int row = 0; row < 3; row++) {
-                    for (int col = 0; col < 3; col++) {
-                        result[row * 3 + col] = screenToTrue[col * 3 + row];
-                    }
-                }
-                return result;
-            }
-
             private void notifyCompassChangeListeners(double[] heading) {
                 events.success(heading);
                 lastHeading = (float) heading[0];
-            }
-
-            /**
-             * Android only reports a coarse accuracy status: map it to an
-             * approximate error in degrees (-1 = unknown/unreliable), matching
-             * the unit of iOS {@code CLHeading.headingAccuracy}.
-             */
-            private double getAccuracy() {
-                switch (lastAccuracySensorStatus) {
-                    case SensorManager.SENSOR_STATUS_ACCURACY_HIGH:
-                        return 15;
-                    case SensorManager.SENSOR_STATUS_ACCURACY_MEDIUM:
-                        return 30;
-                    case SensorManager.SENSOR_STATUS_ACCURACY_LOW:
-                        return 45;
-                    default:
-                        return -1;
-                }
             }
 
             /**

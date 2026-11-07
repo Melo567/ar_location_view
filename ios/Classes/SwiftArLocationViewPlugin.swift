@@ -105,7 +105,7 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
       /// Sends `[heading, headingForCameraMode, accuracy, m0...m8, orientation]`
       /// where `m` is the row-major world (East, North, Up) -> screen rotation
       /// matrix expected by `ArSensor.rotationMatrix`, and `orientation` the
-      /// UI orientation (see `orientationCode`).
+      /// UI orientation (see `CompassMath.orientationCode`).
       private func emitAttitude(_ data: CMDeviceMotion) {
           guard let sink = eventSink else { return; }
           let r = data.attitude.rotationMatrix;
@@ -117,22 +117,14 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
           if resolveMatrixConvention(m, gravity: data.gravity) {
               m = m.transpose;
           }
-          // Reference frame is (North, West, Up): convert from (East, North, Up).
-          let enuToReference = simd_double3x3(rows: [
-              simd_double3(0, 1, 0),
-              simd_double3(-1, 0, 0),
-              simd_double3(0, 0, 1),
-          ]);
           let orientation = interfaceOrientation();
-          let worldToScreen = deviceToScreen(orientation) * m * enuToReference;
-          var payload = [lastHeading, lastHeadingForCameraMode, lastHeadingAccuracy];
-          for row in 0..<3 {
-              for col in 0..<3 {
-                  payload.append(worldToScreen[col, row]);
-              }
-          }
-          payload.append(Self.orientationCode(orientation));
-          sink(payload);
+          sink(CompassMath.payload(
+              heading: lastHeading,
+              headingForCameraMode: lastHeadingForCameraMode,
+              accuracy: lastHeadingAccuracy,
+              worldToScreen: CompassMath.worldToScreen(
+                  referenceToDevice: m, orientation: orientation),
+              orientation: orientation));
       }
 
       private func interfaceOrientation() -> UIInterfaceOrientation {
@@ -145,65 +137,15 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
           }
       }
 
-      /// Index of Flutter's `DeviceOrientation` (0 portraitUp, 1 landscapeLeft,
-      /// 2 portraitDown, 3 landscapeRight), or -1 when unknown. Left and right
-      /// are swapped: `UIInterfaceOrientation` is the rotation needed to get
-      /// back to portrait, not the rotation of the device (same mapping as
-      /// the native_device_orientation plugin).
-      private static func orientationCode(_ orientation: UIInterfaceOrientation) -> Double {
-          switch orientation {
-          case .portrait: return 0;
-          case .landscapeRight: return 1;
-          case .portraitUpsideDown: return 2;
-          case .landscapeLeft: return 3;
-          default: return -1;
-          }
-      }
-
-      /// Picks the matrix convention whose "down" direction matches the
-      /// measured gravity (device frame). Locked once the answer is clear, so
-      /// it cannot flip between samples. Both conventions agree on "down" in
-      /// some poses (e.g. lying flat): until then, assume the documented one
-      /// (reference -> device) without locking it.
+      /// Locks the matrix convention (see `CompassMath.needsTranspose`) once
+      /// the answer is clear, so it cannot flip between samples. Until then,
+      /// assumes the documented one (reference -> device) without locking it.
       private func resolveMatrixConvention(_ m: simd_double3x3, gravity: CMAcceleration) -> Bool {
           if let transpose = transposeAttitude { return transpose; }
-          let g = simd_normalize(simd_double3(gravity.x, gravity.y, gravity.z));
-          let down = simd_double3(0, 0, -1);
-          // Reference "down" expressed in the device frame for each convention.
-          let errorDirect = simd_length(m * down - g);
-          let errorTransposed = simd_length(m.transpose * down - g);
-          guard abs(errorDirect - errorTransposed) > 0.3 else { return false; }
-          let transpose = errorTransposed < errorDirect;
+          guard let transpose = CompassMath.needsTranspose(
+              m, gravity: simd_double3(gravity.x, gravity.y, gravity.z)) else { return false; }
           transposeAttitude = transpose;
           return transpose;
-      }
-
-      /// Rotation from the portrait device frame to the current UI frame
-      /// (x right, y up of the displayed screen).
-      private func deviceToScreen(_ orientation: UIInterfaceOrientation) -> simd_double3x3 {
-          switch orientation {
-          case .landscapeRight:
-              // Device top points left: screen right = device -y, up = device x.
-              return simd_double3x3(rows: [
-                  simd_double3(0, -1, 0),
-                  simd_double3(1, 0, 0),
-                  simd_double3(0, 0, 1),
-              ]);
-          case .landscapeLeft:
-              return simd_double3x3(rows: [
-                  simd_double3(0, 1, 0),
-                  simd_double3(-1, 0, 0),
-                  simd_double3(0, 0, 1),
-              ]);
-          case .portraitUpsideDown:
-              return simd_double3x3(rows: [
-                  simd_double3(-1, 0, 0),
-                  simd_double3(0, -1, 0),
-                  simd_double3(0, 0, 1),
-              ]);
-          default:
-              return matrix_identity_double3x3;
-          }
       }
 
       public func locationManager(_ manager: CLLocationManager, didUpdateHeading newHeading: CLHeading) {
@@ -244,12 +186,12 @@ public class SwiftArLocationViewPlugin: NSObject, FlutterPlugin, FlutterStreamHa
               // Without motion data, the heading alone is still useful; with
               // it, `emitAttitude` already streams at a higher rate.
               if !motion.isDeviceMotionActive {
-                  eventSink?([
-                      heading,
-                      headingForCameraMode,
-                      newHeading.headingAccuracy,
-                      Self.orientationCode(interfaceOrientation()),
-                  ]);
+                  eventSink?(CompassMath.payload(
+                      heading: heading,
+                      headingForCameraMode: headingForCameraMode,
+                      accuracy: newHeading.headingAccuracy,
+                      worldToScreen: nil,
+                      orientation: interfaceOrientation()));
               }
           }
       }
