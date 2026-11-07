@@ -2,7 +2,7 @@ name: ar_location_view
 description: >-
   Location-based augmented reality: shows labels for geolocated points of
   interest over the camera preview, stacked so that every POI stays visible.
-version: 3.2.1
+version: 3.2.2
 homepage: https://github.com/Melo567/ar_location_view
 repository: https://github.com/Melo567/ar_location_view
 issue_tracker: https://github.com/Melo567/ar_location_view/issues
